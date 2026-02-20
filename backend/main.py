@@ -1,12 +1,50 @@
 # backend/main.py
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine
+from database import engine, SessionLocal
 from models import Base
+from config import get_settings
+from services.tdx_client import TDXClient
+from services.claude_client import ClaudeAnalyzer
+from services.scan_engine import ScanEngine
+from scheduler import start_scheduler, stop_scheduler
+import routers.scans as scans_router
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="TDX KA Fixer", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app_: FastAPI):
+    settings = get_settings()
+    tdx = TDXClient(
+        base_url=settings.tdx_base_url,
+        app_id=settings.tdx_app_id,
+        beid=settings.tdx_beid,
+        web_services_key=settings.tdx_web_services_key,
+    )
+    analyzer = ClaudeAnalyzer(
+        api_key=settings.anthropic_api_key,
+        model=settings.claude_model,
+    )
+
+    def run_scan(mode: str = "heuristic", db=None):
+        with SessionLocal() as session:
+            engine_ = ScanEngine(
+                db=session, tdx_client=tdx, analyzer=analyzer,
+                heuristic_threshold=settings.heuristic_threshold,
+            )
+            if mode == "full_batch":
+                return engine_.run_full_batch_scan()
+            return engine_.run_heuristic_scan()
+
+    scans_router.run_scan_job = run_scan
+    start_scheduler(settings.scan_cron, lambda: run_scan("heuristic"))
+    yield
+    stop_scheduler()
+
+
+app = FastAPI(title="TDX KA Fixer", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,18 +53,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from routers import articles, queue, scans, audit
+app.include_router(articles.router)
+app.include_router(queue.router)
+app.include_router(scans.router)
+app.include_router(audit.router)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-from routers import articles
-app.include_router(articles.router)
-
-from routers import queue
-app.include_router(queue.router)
-
-from routers import scans
-app.include_router(scans.router)
-
-from routers import audit
-app.include_router(audit.router)
