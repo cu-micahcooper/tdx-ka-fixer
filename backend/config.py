@@ -1,5 +1,5 @@
 # backend/config.py
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 class Settings(BaseSettings):
@@ -12,8 +12,7 @@ class Settings(BaseSettings):
     heuristic_threshold: float = 5.0
     claude_model: str = "claude-sonnet-4-6"
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 @lru_cache
 def get_settings() -> Settings:

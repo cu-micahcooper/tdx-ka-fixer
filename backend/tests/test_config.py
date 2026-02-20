@@ -2,6 +2,7 @@
 import os
 import pytest
 from unittest.mock import patch
+from pydantic import ValidationError
 
 def test_settings_loads_from_env():
     env = {
@@ -21,5 +22,5 @@ def test_settings_loads_from_env():
 def test_settings_missing_required_raises():
     with patch.dict(os.environ, {}, clear=True):
         from config import Settings
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             Settings()
