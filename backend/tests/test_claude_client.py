@@ -43,3 +43,12 @@ def test_analyze_raises_on_invalid_json():
     with patch.object(analyzer.client.messages, "create", return_value=mock_response):
         with pytest.raises(Exception):
             analyzer.analyze(title="Test", body="Content")
+
+def test_analyze_handles_markdown_code_fences():
+    analyzer = ClaudeAnalyzer(api_key="fake", model="claude-sonnet-4-6")
+    fenced_response = f"```json\n{SAMPLE_RESPONSE}\n```"
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text=fenced_response)]
+    with patch.object(analyzer.client.messages, "create", return_value=mock_response):
+        result = analyzer.analyze(title="Test", body="Content")
+    assert result.score_clarity == 6.0

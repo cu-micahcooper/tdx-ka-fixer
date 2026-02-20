@@ -39,6 +39,17 @@ Article Body:
 {body}"""
 
 
+def _extract_json(text: str) -> dict:
+    """Extract JSON from Claude response, handling markdown code fences."""
+    text = text.strip()
+    # Strip markdown code fences if present
+    if text.startswith("```"):
+        lines = text.splitlines()
+        # Remove first line (```json or ```) and last line (```)
+        text = "\n".join(lines[1:-1]).strip()
+    return json.loads(text)
+
+
 @dataclass
 class AnalysisResult:
     score_clarity: float
@@ -48,9 +59,9 @@ class AnalysisResult:
     score_accuracy: float
     overall_score: float
     issue_summary: str
-    defects: list[str]
     proposed_body: str
     approval_tier: str
+    defects: list[str] = field(default_factory=list)
 
 
 class ClaudeAnalyzer:
@@ -66,7 +77,7 @@ class ClaudeAnalyzer:
             messages=[{"role": "user", "content": prompt}],
         )
         raw = response.content[0].text
-        data = json.loads(raw)
+        data = _extract_json(raw)
         return AnalysisResult(
             score_clarity=float(data["score_clarity"]),
             score_completeness=float(data["score_completeness"]),
