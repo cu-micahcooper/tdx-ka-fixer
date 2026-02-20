@@ -30,13 +30,13 @@ async def lifespan(app_: FastAPI):
 
     def run_scan(mode: str = "heuristic", db=None):
         with SessionLocal() as session:
-            engine_ = ScanEngine(
+            scan_eng = ScanEngine(
                 db=session, tdx_client=tdx, analyzer=analyzer,
                 heuristic_threshold=settings.heuristic_threshold,
             )
             if mode == "full_batch":
-                return engine_.run_full_batch_scan()
-            return engine_.run_heuristic_scan()
+                return scan_eng.run_full_batch_scan()
+            return scan_eng.run_heuristic_scan()
 
     scans_router.run_scan_job = run_scan
     start_scheduler(settings.scan_cron, lambda: run_scan("heuristic"))
