@@ -48,6 +48,14 @@ class ScanEngine:
         return article
 
     def _analyze_and_queue(self, article: Article) -> None:
+        # Skip if already pending in queue
+        existing = (
+            self.db.query(ReviewQueue)
+            .filter_by(article_id=article.id, status="pending")
+            .first()
+        )
+        if existing:
+            return
         result = self.analyzer.analyze(title=article.title, body=article.body)
         analysis = AnalysisResult(
             article_id=article.id,
@@ -72,39 +80,51 @@ class ScanEngine:
         job = ScanJob(mode="heuristic")
         self.db.add(job)
         self.db.flush()
-        raw_articles = self.tdx.list_articles()
-        flagged = 0
-        for raw in raw_articles:
-            article = self._sync_article(raw)
-            article_dict = {
-                "body": article.body,
-                "modified_at": article.modified_at,
-                "created_at": article.created_at,
-                "view_count": article.view_count,
-            }
-            score = self.heuristic.score(article_dict)
-            article.heuristic_score = score
-            if self.heuristic.needs_review(article_dict):
-                self._analyze_and_queue(article)
-                flagged += 1
-        job.articles_scanned = len(raw_articles)
-        job.articles_flagged = flagged
-        job.status = "complete"
-        job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        self.db.commit()
+        try:
+            raw_articles = self.tdx.list_articles()
+            flagged = 0
+            for raw in raw_articles:
+                article = self._sync_article(raw)
+                article_dict = {
+                    "body": article.body,
+                    "modified_at": article.modified_at,
+                    "created_at": article.created_at,
+                    "view_count": article.view_count,
+                }
+                score = self.heuristic.score(article_dict)
+                article.heuristic_score = score
+                if self.heuristic.needs_review(article_dict):
+                    self._analyze_and_queue(article)
+                    flagged += 1
+            job.articles_scanned = len(raw_articles)
+            job.articles_flagged = flagged
+            job.status = "complete"
+            job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            self.db.commit()
+        except Exception as e:
+            job.status = "failed"
+            job.error = str(e)
+            self.db.commit()
+            raise
         return job
 
     def run_full_batch_scan(self) -> ScanJob:
         job = ScanJob(mode="full_batch")
         self.db.add(job)
         self.db.flush()
-        raw_articles = self.tdx.list_articles()
-        for raw in raw_articles:
-            article = self._sync_article(raw)
-            self._analyze_and_queue(article)
-        job.articles_scanned = len(raw_articles)
-        job.articles_flagged = len(raw_articles)
-        job.status = "complete"
-        job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        self.db.commit()
+        try:
+            raw_articles = self.tdx.list_articles()
+            for raw in raw_articles:
+                article = self._sync_article(raw)
+                self._analyze_and_queue(article)
+            job.articles_scanned = len(raw_articles)
+            job.articles_flagged = len(raw_articles)
+            job.status = "complete"
+            job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            self.db.commit()
+        except Exception as e:
+            job.status = "failed"
+            job.error = str(e)
+            self.db.commit()
+            raise
         return job

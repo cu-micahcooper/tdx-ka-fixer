@@ -88,3 +88,23 @@ def test_sync_updates_existing_article(db):
     articles = db.query(Article).all()
     assert len(articles) == 1  # no duplicate
     assert articles[0].title == "Updated Title"
+
+def test_heuristic_scan_marks_job_failed_on_error(db):
+    tdx = MagicMock()
+    tdx.list_articles.side_effect = RuntimeError("TDX down")
+    analyzer = make_mock_analyzer()
+    engine = ScanEngine(db=db, tdx_client=tdx, analyzer=analyzer)
+    with pytest.raises(RuntimeError):
+        engine.run_heuristic_scan()
+    job = db.query(ScanJob).first()
+    assert job.status == "failed"
+    assert "TDX down" in job.error
+
+def test_no_duplicate_queue_entries_on_rescan(db):
+    tdx = MagicMock()
+    tdx.list_articles.return_value = [RAW_ARTICLE_BAD]
+    analyzer = make_mock_analyzer()
+    engine = ScanEngine(db=db, tdx_client=tdx, analyzer=analyzer)
+    engine.run_heuristic_scan()
+    engine.run_heuristic_scan()
+    assert db.query(ReviewQueue).count() == 1  # no duplicate
