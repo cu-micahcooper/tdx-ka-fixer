@@ -70,3 +70,13 @@ def test_update_article(client):
     )
     result = client.update_article(123, "New body")
     assert result["Body"] == "New body"
+
+@respx.mock
+def test_list_categories(client):
+    client.token = "fake-token"
+    respx.get(f"{TDX_BASE}/api/42/knowledgebase/categories").mock(
+        return_value=httpx.Response(200, json=[{"ID": 1, "Name": "General"}])
+    )
+    categories = client.list_categories()
+    assert len(categories) == 1
+    assert categories[0]["Name"] == "General"
