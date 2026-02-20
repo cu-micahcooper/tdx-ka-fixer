@@ -1,0 +1,8 @@
+.env
+ka_fixer.db
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+node_modules/
+dist/
