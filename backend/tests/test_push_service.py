@@ -79,3 +79,43 @@ def test_push_marks_failed_on_tdx_error(db):
     db.refresh(change)
     assert change.push_status == "failed"
     assert "TDX unavailable" in change.push_error
+
+def test_push_all_pending_continues_after_failure(db):
+    # Seed two approved changes
+    change1 = seed_approved_change(db)
+    # Seed a second one with a different tdx_id
+    article2 = Article(tdx_id=56, title="Art2", body="Old body 2",
+                       category_id=1, category_name="Cat",
+                       heuristic_score=4.0, status="active")
+    db.add(article2)
+    db.flush()
+    analysis2 = AnalysisResult(
+        article_id=article2.id, model_used="test",
+        score_clarity=8.0, score_completeness=8.0, score_findability=8.0,
+        score_redundancy=8.0, score_accuracy=8.0, overall_score=8.0,
+        issue_summary="Good", defects_json="[]",
+        proposed_body="New body 2", approval_tier="confirm",
+    )
+    db.add(analysis2)
+    db.flush()
+    qi2 = ReviewQueue(article_id=article2.id, analysis_id=analysis2.id, status="approved")
+    db.add(qi2)
+    db.flush()
+    change2 = ApprovedChange(
+        review_queue_id=qi2.id, article_id=article2.id,
+        original_body="Old body 2", approved_body="New body 2",
+    )
+    db.add(change2)
+    db.commit()
+
+    tdx = MagicMock()
+    # First call fails, second succeeds
+    tdx.update_article.side_effect = [RuntimeError("fail"), {"Body": "New body 2"}]
+    svc = PushService(db=db, tdx_client=tdx)
+    results = svc.push_all_pending()
+
+    assert len(results) == 1  # only 1 succeeded
+    db.refresh(change1)
+    db.refresh(change2)
+    assert change1.push_status == "failed"
+    assert change2.push_status == "success"

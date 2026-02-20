@@ -42,4 +42,10 @@ class PushService:
             .filter_by(push_status="pending")
             .all()
         )
-        return [self.push(c.id) for c in pending]
+        results = []
+        for c in pending:
+            try:
+                results.append(self.push(c.id))
+            except Exception:
+                pass  # push() already marks change as failed and commits
+        return results
