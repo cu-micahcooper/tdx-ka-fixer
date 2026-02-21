@@ -5,16 +5,36 @@ import { listArticles } from '../api/articles'
 
 const selectCls = 'px-3 py-2 text-sm border border-slate-200 rounded-md bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
 
+const tdxStatusLabel: Record<number, string> = {
+  1: 'Draft',
+  2: 'Submitted',
+  3: 'Published',
+  5: 'Archived',
+}
+
+const tdxStatusColor: Record<number, string> = {
+  1: 'bg-slate-100 text-slate-600',
+  2: 'bg-amber-100 text-amber-700',
+  3: 'bg-green-100 text-green-700',
+  5: 'bg-red-100 text-red-700',
+}
+
 export default function ArticleBrowser() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [tdxStatusFilter, setTdxStatusFilter] = useState<string>('') // '1'|'2'|'3'|'5' | ''
+  const [publicFilter, setPublicFilter] = useState<string>('')       // 'true' | 'false' | ''
   const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [scoreFilter, setScoreFilter] = useState<string>('')
 
+  const queryParams = {
+    ...(tdxStatusFilter ? { tdx_status: Number(tdxStatusFilter) } : {}),
+    ...(publicFilter !== '' ? { is_public: publicFilter === 'true' } : {}),
+  }
+
   const { data: articles, isLoading } = useQuery({
-    queryKey: ['articles', statusFilter],
-    queryFn: () => listArticles(statusFilter ? { status: statusFilter } : undefined),
+    queryKey: ['articles', tdxStatusFilter, publicFilter],
+    queryFn: () => listArticles(Object.keys(queryParams).length ? queryParams : undefined),
   })
 
   const categories = useMemo(() => {
@@ -41,10 +61,17 @@ export default function ArticleBrowser() {
           onChange={e => setSearch(e.target.value)}
           className="px-3 py-2 text-sm border border-slate-200 rounded-md w-72 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={selectCls}>
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="archived">Archived</option>
+        <select value={tdxStatusFilter} onChange={e => setTdxStatusFilter(e.target.value)} className={selectCls}>
+          <option value="">All Publish Statuses</option>
+          <option value="3">Published</option>
+          <option value="2">Submitted</option>
+          <option value="1">Draft</option>
+          <option value="5">Archived</option>
+        </select>
+        <select value={publicFilter} onChange={e => setPublicFilter(e.target.value)} className={selectCls}>
+          <option value="">Public &amp; Internal</option>
+          <option value="true">Public Only</option>
+          <option value="false">Internal Only</option>
         </select>
         <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className={selectCls}>
           <option value="">All Categories</option>
@@ -67,7 +94,8 @@ export default function ArticleBrowser() {
                 <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Title</th>
                 <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Category</th>
                 <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Score</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Status</th>
+                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Publish Status</th>
+                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Visibility</th>
                 <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Modified</th>
               </tr>
             </thead>
@@ -85,7 +113,20 @@ export default function ArticleBrowser() {
                       {a.heuristic_score.toFixed(1)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-500">{a.status}</td>
+                  <td className="px-4 py-3 text-sm">
+                    {a.tdx_status != null ? (
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${tdxStatusColor[a.tdx_status] ?? 'bg-slate-100 text-slate-600'}`}>
+                        {tdxStatusLabel[a.tdx_status] ?? `Status ${a.tdx_status}`}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${a.is_public ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {a.is_public ? 'Public' : 'Internal'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-sm text-slate-500">
                     {a.modified_at ? new Date(a.modified_at).toLocaleDateString() : '—'}
                   </td>

@@ -27,6 +27,7 @@ class ScanEngine:
 
     def _sync_article(self, raw: dict) -> Article:
         article = self.db.query(Article).filter_by(tdx_id=raw["ID"]).first()
+        tdx_status = raw.get("Status")
         data = dict(
             title=raw.get("Subject", ""),
             body=raw.get("Body", ""),
@@ -36,7 +37,9 @@ class ScanEngine:
             modified_at=_parse_date(raw.get("ModifiedDate")),
             view_count=raw.get("NumViews", 0),
             last_synced_at=datetime.now(timezone.utc).replace(tzinfo=None),
-            status="archived" if raw.get("Status") == 5 else "active",
+            tdx_status=tdx_status,
+            is_public=bool(raw.get("IsPublic", False)),
+            status="archived" if tdx_status == 5 else "active",
         )
         if article:
             for k, v in data.items():

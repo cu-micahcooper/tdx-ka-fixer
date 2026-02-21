@@ -30,8 +30,8 @@ def _serialize_item(item: ReviewQueue) -> dict:
         "article_id": item.article_id,
         "analysis_id": item.analysis_id,
         "status": item.status,
-        "queued_at": item.queued_at.isoformat() if item.queued_at else None,
-        "reviewed_at": item.reviewed_at.isoformat() if item.reviewed_at else None,
+        "queued_at": item.queued_at.isoformat() + "Z" if item.queued_at else None,
+        "reviewed_at": item.reviewed_at.isoformat() + "Z" if item.reviewed_at else None,
         "reviewer_note": item.reviewer_note,
         "article": {
             "id": a.id,
@@ -39,7 +39,7 @@ def _serialize_item(item: ReviewQueue) -> dict:
             "title": a.title,
             "body": a.body,
             "category_name": a.category_name,
-            "modified_at": a.modified_at.isoformat() if a.modified_at else None,
+            "modified_at": a.modified_at.isoformat() + "Z" if a.modified_at else None,
             "tdx_url": _article_url(a.tdx_id),
         } if a else None,
         "analysis": {

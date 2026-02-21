@@ -30,7 +30,7 @@ def list_audit(limit: int = 100, db: Session = Depends(get_db)):
             "action": e.action,
             "original_body": e.original_body,
             "new_body": e.new_body,
-            "pushed_at": e.pushed_at.isoformat() if e.pushed_at else None,
+            "pushed_at": e.pushed_at.isoformat() + "Z" if e.pushed_at else None,
             "tdx_url": _article_url(e.tdx_id),
         }
         for e in entries

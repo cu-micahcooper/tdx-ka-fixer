@@ -15,9 +15,25 @@ def run_scan_job(mode: str, db: Session):
 class TriggerRequest(BaseModel):
     mode: str = "heuristic"
 
+def _fmt(dt) -> str | None:
+    return dt.isoformat() + "Z" if dt else None
+
 @router.get("")
 def list_scans(db: Session = Depends(get_db)):
-    return db.query(ScanJob).order_by(ScanJob.started_at.desc()).limit(50).all()
+    jobs = db.query(ScanJob).order_by(ScanJob.started_at.desc()).limit(50).all()
+    return [
+        {
+            "id": j.id,
+            "mode": j.mode,
+            "status": j.status,
+            "started_at": _fmt(j.started_at),
+            "completed_at": _fmt(j.completed_at),
+            "articles_scanned": j.articles_scanned,
+            "articles_flagged": j.articles_flagged,
+            "error": j.error,
+        }
+        for j in jobs
+    ]
 
 @router.post("/trigger")
 def trigger_scan(req: TriggerRequest):

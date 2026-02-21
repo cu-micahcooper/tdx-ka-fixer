@@ -3,8 +3,8 @@ import time
 import httpx
 from typing import Optional
 
-_TIMEOUT = httpx.Timeout(60.0)
-_REQUEST_INTERVAL = 1.1  # seconds between requests to avoid TDX throttling
+_TIMEOUT = httpx.Timeout(120.0)
+_REQUEST_INTERVAL = 5.0  # seconds between requests to avoid TDX throttling
 
 
 class TDXClient:
@@ -53,25 +53,56 @@ class TDXClient:
         response.raise_for_status()
         return response
 
-    def list_articles(self) -> list[dict]:
-        """Fetch all KB articles by iterating every category.
+    # High-yield KB terms for the supplemental global pass.  Chosen because
+    # they surface the most articles not already captured by the category pass.
+    _SUPPLEMENTAL_TERMS = [
+        "install", "zoom", "archive", "setup", "email",
+        "network", "vpn", "password", "canvas", "dayforce",
+    ]
 
-        The TDX search endpoint hard-caps at 50 results per call regardless of
-        MaxResults, so we iterate all categories (including subcategories) and
-        deduplicate by article ID to get the full KB.
+    def list_articles(self) -> list[dict]:
+        """Fetch all KB articles.
+
+        The TDX search endpoint hard-caps at 50 results per call and exposes no
+        real pagination — all Skip/Offset/PageIndex/MaxResults parameters are
+        silently ignored.  Results are sorted by ModifiedDate desc, so large or
+        older categories lose articles below the 50-result horizon.
+
+        Strategy:
+        1. Iterate every category (including sub-categories) and collect the 50
+           most-recently-modified articles per category.
+        2. Do a supplemental global pass with common KB search terms to surface
+           articles that were pushed below the horizon in their category.
+
+        All results are deduplicated by article ID.
         """
-        categories = self.list_categories()
+        url = f"{self.base_url}/api/{self.app_id}/knowledgebase/search"
         seen: set[int] = set()
         articles: list[dict] = []
-        url = f"{self.base_url}/api/{self.app_id}/knowledgebase/search"
-        for cat in self._flatten_categories(categories):
+
+        # Pass 1: per-category
+        for cat in self._flatten_categories(self.list_categories()):
             time.sleep(_REQUEST_INTERVAL)
-            response = self._request("POST", url, json={"CategoryID": cat["ID"]})
-            for article in response.json():
-                if article["ID"] not in seen and article.get("Status") != 5:
-                    seen.add(article["ID"])
-                    articles.append(article)
+            batch: list[dict] = self._request(
+                "POST", url, json={"CategoryID": cat["ID"]}
+            ).json()
+            self._collect(batch, seen, articles)
+
+        # Pass 2: global supplemental searches
+        for term in self._SUPPLEMENTAL_TERMS:
+            time.sleep(_REQUEST_INTERVAL)
+            batch = self._request(
+                "POST", url, json={"SearchText": term}
+            ).json()
+            self._collect(batch, seen, articles)
+
         return articles
+
+    def _collect(self, batch: list[dict], seen: set[int], articles: list[dict]) -> None:
+        for a in batch:
+            if a["ID"] not in seen:
+                seen.add(a["ID"])
+                articles.append(a)
 
     @staticmethod
     def _flatten_categories(categories: list[dict]) -> list[dict]:

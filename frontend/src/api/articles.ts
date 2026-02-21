@@ -7,8 +7,12 @@ export interface ArticleDetail {
   queue_item: { id: number; status: string; reviewer_note: string | null } | null
 }
 
-export const listArticles = (params?: { status?: string; category_id?: number }) =>
-  client.get<Article[]>('/articles', { params }).then(r => r.data)
+export const listArticles = (params?: {
+  status?: string
+  tdx_status?: number
+  is_public?: boolean
+  category_id?: number
+}) => client.get<Article[]>('/articles', { params }).then(r => r.data)
 
 export const getArticle = (id: number) =>
   client.get<Article>(`/articles/${id}`).then(r => r.data)

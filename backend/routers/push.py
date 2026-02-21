@@ -30,8 +30,8 @@ def list_approved(db: Session = Depends(get_db)):
             "tdx_id": article.tdx_id if article else None,
             "push_status": c.push_status,
             "push_error": c.push_error,
-            "approved_at": c.approved_at.isoformat() if c.approved_at else None,
-            "pushed_at": c.pushed_at.isoformat() if c.pushed_at else None,
+            "approved_at": c.approved_at.isoformat() + "Z" if c.approved_at else None,
+            "pushed_at": c.pushed_at.isoformat() + "Z" if c.pushed_at else None,
         })
     return result
 

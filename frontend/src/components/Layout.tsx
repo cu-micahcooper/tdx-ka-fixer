@@ -12,7 +12,10 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen">
       <nav className="w-52 bg-slate-800 text-white p-4 flex-shrink-0">
-        <h2 className="text-blue-400 mt-0 mb-4 text-base font-semibold tracking-wide">TDX KA Fixer</h2>
+        <div className="flex flex-col items-center mb-4">
+          <img src="/logo.png" alt="TDX KA Fixer" className="w-28 h-28 object-contain rounded-xl mb-2" />
+          <h2 className="text-blue-400 mt-0 mb-0 text-sm font-semibold tracking-wide text-center">TDX KA Fixer</h2>
+        </div>
         {nav.map(({ to, label }) => (
           <NavLink
             key={to}

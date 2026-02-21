@@ -1,6 +1,6 @@
 # backend/models.py
 from sqlalchemy import (
-    Column, Integer, String, Float, Text, DateTime, ForeignKey, func
+    Column, Integer, String, Float, Text, DateTime, Boolean, ForeignKey, func
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -21,6 +21,8 @@ class Article(Base):
     view_count = Column(Integer, default=0)
     heuristic_score = Column(Float, default=10.0)
     status = Column(String, default="active")
+    tdx_status = Column(Integer)          # raw TDX Status integer (1=draft,2=submitted,3=published,5=archived)
+    is_public = Column(Boolean, default=False)
     analyses = relationship("AnalysisResult", back_populates="article")
     queue_items = relationship("ReviewQueue", back_populates="article")
 

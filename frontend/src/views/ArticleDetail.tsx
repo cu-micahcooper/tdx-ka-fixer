@@ -12,6 +12,20 @@ const tierBadge: Record<string, string> = {
   admin: 'bg-red-600',
 }
 
+const tdxStatusLabel: Record<number, string> = {
+  1: 'Draft',
+  2: 'Submitted',
+  3: 'Published',
+  5: 'Archived',
+}
+
+const tdxStatusColor: Record<number, string> = {
+  1: 'bg-slate-100 text-slate-600',
+  2: 'bg-amber-100 text-amber-700',
+  3: 'bg-green-100 text-green-700',
+  5: 'bg-red-100 text-red-700',
+}
+
 const scoreColor = (v: number) => (v < 6 ? 'text-red-500' : 'text-green-600')
 
 const DIMS = [
@@ -77,7 +91,7 @@ export default function ArticleDetail() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 mb-6">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 mb-4">
         <span>{article.category_name ?? 'Uncategorized'}</span>
         <span>·</span>
         <span className={`font-semibold ${scoreColor(article.heuristic_score)}`}>
@@ -99,6 +113,18 @@ export default function ArticleDetail() {
             </a>
           </>
         )}
+      </div>
+
+      {/* Publish status + visibility badges */}
+      <div className="flex items-center gap-2 mb-6">
+        {article.tdx_status != null && (
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${tdxStatusColor[article.tdx_status] ?? 'bg-slate-100 text-slate-600'}`}>
+            {tdxStatusLabel[article.tdx_status] ?? `Status ${article.tdx_status}`}
+          </span>
+        )}
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${article.is_public ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+          {article.is_public ? 'Public' : 'Internal'}
+        </span>
       </div>
 
       {/* No analysis yet */}

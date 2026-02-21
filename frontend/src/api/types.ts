@@ -8,6 +8,10 @@ export interface Article {
   modified_at: string | null
   heuristic_score: number
   status: string
+  tdx_status: number | null
+  tdx_status_label: string | null
+  is_public: boolean
+  view_count: number
   tdx_url?: string
 }
 
