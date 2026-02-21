@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import ReactDiffViewer from 'react-diff-viewer-continued'
+import RichTextEditor from './RichTextEditor'
 import type { QueueItem } from '../api/types'
 
 interface Props {
@@ -15,6 +17,9 @@ const tierBadge: Record<string, string> = {
 }
 
 export default function DiffReview({ item, onApprove, onReject, onSkip }: Props) {
+  const [editMode, setEditMode] = useState(false)
+  const [editedBody, setEditedBody] = useState(item.analysis.proposed_body)
+
   const defects: string[] = item.analysis.defects ?? []
   const scores: Record<string, number> = {
     clarity: item.analysis.score_clarity,
@@ -69,20 +74,54 @@ export default function DiffReview({ item, onApprove, onReject, onSkip }: Props)
         </ul>
       )}
 
-      <ReactDiffViewer
-        oldValue={item.article.body}
-        newValue={item.analysis.proposed_body}
-        splitView={true}
-        leftTitle="Current"
-        rightTitle="Proposed"
-      />
+      {/* Diff / Edit toggle */}
+      <div className="flex items-center gap-2 mb-3">
+        <button
+          onClick={() => setEditMode(false)}
+          className={`px-3 py-1.5 rounded text-sm font-medium border transition-colors ${
+            !editMode
+              ? 'bg-slate-700 text-white border-slate-700'
+              : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          View Diff
+        </button>
+        <button
+          onClick={() => setEditMode(true)}
+          className={`px-3 py-1.5 rounded text-sm font-medium border transition-colors ${
+            editMode
+              ? 'bg-slate-700 text-white border-slate-700'
+              : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          Edit Proposed
+        </button>
+        {editMode && editedBody !== item.analysis.proposed_body && (
+          <span className="text-xs text-amber-600 font-medium">Edited</span>
+        )}
+      </div>
+
+      {editMode ? (
+        <RichTextEditor
+          initialContent={item.analysis.proposed_body}
+          onChange={setEditedBody}
+        />
+      ) : (
+        <ReactDiffViewer
+          oldValue={item.article.body}
+          newValue={editedBody}
+          splitView={true}
+          leftTitle="Current"
+          rightTitle={editedBody !== item.analysis.proposed_body ? 'Proposed (edited)' : 'Proposed'}
+        />
+      )}
 
       <div className="flex gap-3 mt-4">
         <button
-          onClick={() => onApprove(item.id)}
+          onClick={() => onApprove(item.id, editedBody !== item.analysis.proposed_body ? editedBody : undefined)}
           className="px-5 py-2 bg-green-600 text-white rounded-md font-semibold text-sm hover:bg-green-700"
         >
-          Approve
+          {editedBody !== item.analysis.proposed_body ? 'Approve (edited)' : 'Approve'}
         </button>
         <button
           onClick={() => {

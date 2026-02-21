@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReactDiffViewer from 'react-diff-viewer-continued'
+import RichTextEditor from '../components/RichTextEditor'
 import { getArticleAnalysis } from '../api/articles'
 import { approveItem, rejectItem, skipItem } from '../api/queue'
 
@@ -36,7 +38,13 @@ export default function ArticleDetail() {
     qc.invalidateQueries({ queryKey: ['queue'] })
   }
 
-  const approve = useMutation({ mutationFn: (qid: number) => approveItem(qid), onSuccess: invalidate })
+  const [editMode, setEditMode] = useState(false)
+  const [editedBody, setEditedBody] = useState<string | null>(null)
+
+  const approve = useMutation({
+    mutationFn: ({ qid, body }: { qid: number; body?: string }) => approveItem(qid, body),
+    onSuccess: invalidate,
+  })
   const reject = useMutation({
     mutationFn: ({ qid, note }: { qid: number; note: string }) => rejectItem(qid, note),
     onSuccess: invalidate,
@@ -145,9 +153,9 @@ export default function ArticleDetail() {
             )}
           </div>
 
-          {/* Queue status + actions */}
+          {/* Queue status */}
           {queue_item && (
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
               <span className="text-sm text-slate-500">
                 Queue status:{' '}
                 <strong className={
@@ -162,49 +170,89 @@ export default function ArticleDetail() {
               {queue_item.reviewer_note && (
                 <span className="text-sm text-slate-400 italic">"{queue_item.reviewer_note}"</span>
               )}
-              {isPending && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => approve.mutate(queue_item.id)}
-                    disabled={approve.isPending}
-                    className="px-4 py-1.5 bg-green-600 text-white rounded text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => {
-                      const note = window.prompt('Rejection reason (optional):') ?? ''
-                      reject.mutate({ qid: queue_item.id, note })
-                    }}
-                    disabled={reject.isPending}
-                    className="px-4 py-1.5 bg-red-600 text-white rounded text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => skip.mutate(queue_item.id)}
-                    disabled={skip.isPending}
-                    className="px-4 py-1.5 bg-slate-500 text-white rounded text-sm font-semibold hover:bg-slate-600 disabled:opacity-50"
-                  >
-                    Skip
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
-          {/* Diff */}
-          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-              <h2 className="text-sm font-semibold text-slate-700 m-0">Proposed Changes</h2>
+          {/* Diff / Edit toggle + actions */}
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setEditMode(false)}
+                className={`px-3 py-1.5 rounded text-sm font-medium border transition-colors ${
+                  !editMode
+                    ? 'bg-slate-700 text-white border-slate-700'
+                    : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                View Diff
+              </button>
+              <button
+                onClick={() => {
+                  if (editedBody === null) setEditedBody(analysis.proposed_body)
+                  setEditMode(true)
+                }}
+                className={`px-3 py-1.5 rounded text-sm font-medium border transition-colors ${
+                  editMode
+                    ? 'bg-slate-700 text-white border-slate-700'
+                    : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                Edit Proposed
+              </button>
+              {editedBody !== null && editedBody !== analysis.proposed_body && (
+                <span className="text-xs text-amber-600 font-medium">Edited</span>
+              )}
             </div>
-            <ReactDiffViewer
-              oldValue={article.body}
-              newValue={analysis.proposed_body}
-              splitView={true}
-              leftTitle="Current"
-              rightTitle="Proposed"
-            />
+
+            {isPending && queue_item && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => approve.mutate({
+                    qid: queue_item.id,
+                    body: editedBody !== null && editedBody !== analysis.proposed_body ? editedBody : undefined,
+                  })}
+                  disabled={approve.isPending}
+                  className="px-4 py-1.5 bg-green-600 text-white rounded text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
+                >
+                  {editedBody !== null && editedBody !== analysis.proposed_body ? 'Approve (edited)' : 'Approve'}
+                </button>
+                <button
+                  onClick={() => {
+                    const note = window.prompt('Rejection reason (optional):') ?? ''
+                    reject.mutate({ qid: queue_item.id, note })
+                  }}
+                  disabled={reject.isPending}
+                  className="px-4 py-1.5 bg-red-600 text-white rounded text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => skip.mutate(queue_item.id)}
+                  disabled={skip.isPending}
+                  className="px-4 py-1.5 bg-slate-500 text-white rounded text-sm font-semibold hover:bg-slate-600 disabled:opacity-50"
+                >
+                  Skip
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Diff or editor */}
+          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+            {editMode ? (
+              <RichTextEditor
+                initialContent={editedBody ?? analysis.proposed_body}
+                onChange={setEditedBody}
+              />
+            ) : (
+              <ReactDiffViewer
+                oldValue={article.body}
+                newValue={editedBody ?? analysis.proposed_body}
+                splitView={true}
+                leftTitle="Current"
+                rightTitle={editedBody !== null && editedBody !== analysis.proposed_body ? 'Proposed (edited)' : 'Proposed'}
+              />
+            )}
           </div>
         </>
       )}
