@@ -1,5 +1,9 @@
 .env
 ka_fixer.db
+backend/ka_fixer.db-shm
+backend/ka_fixer.db-wal
+*.png
+!frontend/public/*.png
 __pycache__/
 *.pyc
 .pytest_cache/
