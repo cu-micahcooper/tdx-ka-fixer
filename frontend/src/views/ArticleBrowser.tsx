@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { listArticles } from '../api/articles'
 
 const selectCls = 'px-3 py-2 text-sm border border-slate-200 rounded-md bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
 
 export default function ArticleBrowser() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [categoryFilter, setCategoryFilter] = useState<string>('')
@@ -71,8 +73,12 @@ export default function ArticleBrowser() {
             </thead>
             <tbody>
               {filtered.map(a => (
-                <tr key={a.id} className="border-t border-slate-200 hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm text-slate-800">{a.title}</td>
+                <tr
+                  key={a.id}
+                  onClick={() => navigate(`/browser/${a.id}`)}
+                  className="border-t border-slate-200 hover:bg-blue-50 cursor-pointer"
+                >
+                  <td className="px-4 py-3 text-sm text-blue-600 font-medium">{a.title}</td>
                   <td className="px-4 py-3 text-sm text-slate-500">{a.category_name ?? '—'}</td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`font-semibold ${a.heuristic_score < 5 ? 'text-red-500' : 'text-green-600'}`}>
