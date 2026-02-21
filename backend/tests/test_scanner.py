@@ -1,13 +1,13 @@
 # backend/tests/test_scanner.py
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from services.scanner import HeuristicScanner
 
 def make_article(**kwargs):
     defaults = {
         "tdx_id": 1, "title": "Test", "body": "Normal content here with enough words to be valid.",
         "category_id": 1, "category_name": "Cat",
-        "created_at": datetime.utcnow() - timedelta(days=30),
-        "modified_at": datetime.utcnow() - timedelta(days=5),
+        "created_at": datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30),
+        "modified_at": datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=5),
         "view_count": 10, "status": "active",
     }
     defaults.update(kwargs)
@@ -15,7 +15,7 @@ def make_article(**kwargs):
 
 def test_old_unmodified_article_scores_low():
     scanner = HeuristicScanner(threshold=5.0)
-    article = make_article(modified_at=datetime.utcnow() - timedelta(days=400))
+    article = make_article(modified_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=400))
     score = scanner.score(article)
     assert score < 5.0
 
@@ -35,7 +35,7 @@ def test_healthy_article_scores_above_threshold():
     scanner = HeuristicScanner(threshold=5.0)
     article = make_article(
         body="A" * 300,
-        modified_at=datetime.utcnow() - timedelta(days=10),
+        modified_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=10),
         view_count=50,
     )
     score = scanner.score(article)
@@ -50,6 +50,6 @@ def test_needs_review_returns_false_above_threshold():
     scanner = HeuristicScanner(threshold=5.0)
     article = make_article(
         body="A" * 300,
-        modified_at=datetime.utcnow() - timedelta(days=10),
+        modified_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=10),
     )
     assert scanner.needs_review(article) is False

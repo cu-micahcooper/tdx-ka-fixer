@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
-from datetime import datetime
+from datetime import datetime, timezone
 from models import Base, Article, AuditLog
 from main import app
 from database import get_db
@@ -30,7 +30,7 @@ def client_with_db():
         s.add(AuditLog(
             article_id=art.id, tdx_id=10, action="update",
             original_body="Old", new_body="New",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc).replace(tzinfo=None),
         ))
         s.commit()
     yield TestClient(app)
