@@ -69,7 +69,12 @@ class ClaudeAnalyzer:
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
 
+    # ~150k chars ≈ 37k tokens, leaves plenty of room for prompt + response
+    _MAX_BODY_CHARS = 150_000
+
     def analyze(self, title: str, body: str) -> AnalysisResult:
+        if len(body) > self._MAX_BODY_CHARS:
+            body = body[:self._MAX_BODY_CHARS] + "\n\n[TRUNCATED — article exceeds analysis limit]"
         prompt = ANALYSIS_PROMPT.format(title=title, body=body)
         response = self.client.messages.create(
             model=self.model,

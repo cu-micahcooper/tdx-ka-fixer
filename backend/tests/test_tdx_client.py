@@ -18,7 +18,7 @@ def client():
 @respx.mock
 def test_authenticate_stores_token(client):
     respx.post(f"{TDX_BASE}/api/auth/login").mock(
-        return_value=httpx.Response(200, json="fake-token-string")
+        return_value=httpx.Response(200, text="fake-token-string")
     )
     client.authenticate()
     assert client.token == "fake-token-string"
@@ -95,7 +95,7 @@ def test_401_triggers_reauthentication_and_retry(client):
 
     # Re-auth endpoint returns a new token
     respx.post(f"{TDX_BASE}/api/auth/login").mock(
-        return_value=httpx.Response(200, json="new-token")
+        return_value=httpx.Response(200, text="new-token")
     )
 
     articles = client.list_articles()

@@ -17,7 +17,7 @@ class TDXClient:
             response = http.post(url, json=payload)
         if response.status_code != 200:
             raise RuntimeError(f"TDX auth failed: {response.status_code} {response.text}")
-        self.token = response.json()
+        self.token = response.text.strip()
 
     def _headers(self) -> dict:
         if not self.token:
