@@ -58,4 +58,5 @@ export interface AuditEntry {
   original_body: string | null
   new_body: string | null
   pushed_at: string | null
+  tdx_url: string
 }

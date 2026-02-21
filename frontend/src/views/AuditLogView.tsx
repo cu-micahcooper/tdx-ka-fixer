@@ -112,6 +112,7 @@ export default function AuditLogView() {
                 <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">TDX ID</th>
                 <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Action</th>
                 <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Pushed At</th>
+                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Link</th>
               </tr>
             </thead>
             <tbody>
@@ -121,6 +122,12 @@ export default function AuditLogView() {
                   <td className="px-4 py-3 text-sm text-slate-600">{e.action}</td>
                   <td className="px-4 py-3 text-sm text-slate-500">
                     {e.pushed_at ? new Date(e.pushed_at).toLocaleString() : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <a href={e.tdx_url} target="_blank" rel="noreferrer"
+                      className="text-blue-500 hover:text-blue-700">
+                      View ↗
+                    </a>
                   </td>
                 </tr>
               ))}
