@@ -24,31 +24,33 @@ class TDXClient:
             self.authenticate()
         return {"Authorization": f"Bearer {self.token}"}
 
+    def _request(self, method: str, url: str, **kwargs) -> httpx.Response:
+        with httpx.Client() as http:
+            response = http.request(method, url, headers=self._headers(), **kwargs)
+        if response.status_code == 401:
+            self.authenticate()
+            with httpx.Client() as http:
+                response = http.request(method, url, headers=self._headers(), **kwargs)
+        response.raise_for_status()
+        return response
+
     def list_articles(self, max_results: int = 5000) -> list[dict]:
         url = f"{self.base_url}/api/{self.app_id}/knowledgebase/search"
         payload = {"MaxResults": max_results, "IsActive": True}
-        with httpx.Client() as http:
-            response = http.post(url, json=payload, headers=self._headers())
-        response.raise_for_status()
+        response = self._request("POST", url, json=payload)
         return response.json()
 
     def get_article(self, article_id: int) -> dict:
         url = f"{self.base_url}/api/{self.app_id}/knowledgebase/{article_id}"
-        with httpx.Client() as http:
-            response = http.get(url, headers=self._headers())
-        response.raise_for_status()
+        response = self._request("GET", url)
         return response.json()
 
     def update_article(self, article_id: int, new_body: str) -> dict:
         url = f"{self.base_url}/api/{self.app_id}/knowledgebase/{article_id}"
-        with httpx.Client() as http:
-            response = http.post(url, json={"Body": new_body}, headers=self._headers())
-        response.raise_for_status()
+        response = self._request("POST", url, json={"Body": new_body})
         return response.json()
 
     def list_categories(self) -> list[dict]:
         url = f"{self.base_url}/api/{self.app_id}/knowledgebase/categories"
-        with httpx.Client() as http:
-            response = http.get(url, headers=self._headers())
-        response.raise_for_status()
+        response = self._request("GET", url)
         return response.json()

@@ -24,7 +24,7 @@ class HeuristicScanner:
             if modified_at.tzinfo is not None:
                 now = datetime.now(timezone.utc)
             else:
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
             age_days = (now - modified_at).days
             if age_days > 365:
                 score -= 3.0
@@ -56,7 +56,7 @@ class HeuristicScanner:
             if created_at.tzinfo is not None:
                 now = datetime.now(timezone.utc)
             else:
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
             age_days = max((now - created_at).days, 1)
             views_per_month = (view_count / age_days) * 30
             if views_per_month < 1 and age_days > 90:

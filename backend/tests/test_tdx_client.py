@@ -80,3 +80,25 @@ def test_list_categories(client):
     categories = client.list_categories()
     assert len(categories) == 1
     assert categories[0]["Name"] == "General"
+
+@respx.mock
+def test_401_triggers_reauthentication_and_retry(client):
+    """A 401 response should cause re-authentication and a successful retry."""
+    client.token = "expired-token"
+
+    # First call returns 401; second call (after re-auth) returns 200
+    search_route = respx.post(f"{TDX_BASE}/api/42/knowledgebase/search")
+    search_route.side_effect = [
+        httpx.Response(401, text="Unauthorized"),
+        httpx.Response(200, json=[SAMPLE_ARTICLE]),
+    ]
+
+    # Re-auth endpoint returns a new token
+    respx.post(f"{TDX_BASE}/api/auth/loginadmin").mock(
+        return_value=httpx.Response(200, json="new-token")
+    )
+
+    articles = client.list_articles()
+    assert client.token == "new-token"
+    assert len(articles) == 1
+    assert articles[0]["ID"] == 123

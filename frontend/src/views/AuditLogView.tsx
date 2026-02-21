@@ -1,15 +1,49 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listAudit } from '../api/audit'
+import { pushAll } from '../api/push'
 
 export default function AuditLogView() {
+  const queryClient = useQueryClient()
   const { data: entries, isLoading } = useQuery({
     queryKey: ['audit'],
     queryFn: () => listAudit(100),
   })
 
+  const pushMutation = useMutation({
+    mutationFn: pushAll,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit'] })
+      queryClient.invalidateQueries({ queryKey: ['queue'] })
+    },
+  })
+
   return (
     <div>
-      <h1 style={{ marginTop: 0 }}>Audit Log</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+        <h1 style={{ marginTop: 0, marginBottom: 0 }}>Audit Log</h1>
+        <button
+          onClick={() => pushMutation.mutate()}
+          disabled={pushMutation.isPending}
+          style={{
+            padding: '8px 16px',
+            background: '#2563eb',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 6,
+            cursor: pushMutation.isPending ? 'not-allowed' : 'pointer',
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+        >
+          {pushMutation.isPending ? 'Pushing…' : 'Push All Approved'}
+        </button>
+        {pushMutation.isError && (
+          <span style={{ color: '#dc2626', fontSize: 13 }}>Push failed.</span>
+        )}
+        {pushMutation.isSuccess && (
+          <span style={{ color: '#16a34a', fontSize: 13 }}>Push complete.</span>
+        )}
+      </div>
       {isLoading && <p style={{ color: '#64748b' }}>Loading...</p>}
       {!isLoading && (entries?.length === 0) && <p style={{ color: '#64748b' }}>No changes pushed yet.</p>}
       {(entries?.length ?? 0) > 0 && (

@@ -108,3 +108,18 @@ def test_no_duplicate_queue_entries_on_rescan(db):
     engine.run_heuristic_scan()
     engine.run_heuristic_scan()
     assert db.query(ReviewQueue).count() == 1  # no duplicate
+
+def test_full_batch_scan_flagged_count_excludes_already_queued(db):
+    """articles_flagged should only count newly-queued articles, not skipped ones."""
+    tdx = MagicMock()
+    tdx.list_articles.return_value = [RAW_ARTICLE_BAD, RAW_ARTICLE_GOOD]
+    analyzer = make_mock_analyzer()
+    engine = ScanEngine(db=db, tdx_client=tdx, analyzer=analyzer)
+    # First scan queues all 2 articles
+    job1 = engine.run_full_batch_scan()
+    assert job1.articles_flagged == 2
+    assert db.query(ReviewQueue).count() == 2
+    # Second scan: both already have pending entries, so flagged should be 0
+    job2 = engine.run_full_batch_scan()
+    assert job2.articles_flagged == 0
+    assert db.query(ReviewQueue).count() == 2  # still only 2, no duplicates

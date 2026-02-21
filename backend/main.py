@@ -8,8 +8,10 @@ from config import get_settings
 from services.tdx_client import TDXClient
 from services.claude_client import ClaudeAnalyzer
 from services.scan_engine import ScanEngine
+from services.push_service import PushService
 from scheduler import start_scheduler, stop_scheduler
 import routers.scans as scans_router
+import routers.push as push_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -39,6 +41,7 @@ async def lifespan(app_: FastAPI):
             return scan_eng.run_heuristic_scan()
 
     scans_router.run_scan_job = run_scan
+    push_router.push_service_factory = lambda db: PushService(db=db, tdx_client=tdx)
     start_scheduler(settings.scan_cron, lambda: run_scan("heuristic"))
     yield
     stop_scheduler()
@@ -58,6 +61,7 @@ app.include_router(articles.router)
 app.include_router(queue.router)
 app.include_router(scans.router)
 app.include_router(audit.router)
+app.include_router(push_router.router)
 
 
 @app.get("/health")
