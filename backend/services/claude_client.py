@@ -23,6 +23,14 @@ Key facts to reflect in rewrites:
 - Links to cedarville.edu resources should be preserved and treated as authoritative.
 - If scraped source content is provided, use it to ensure accuracy and completeness — do not fabricate steps or policy details.
 
+## Critical rewrite rules
+
+NEVER introduce placeholder or generic text. This means:
+- Do NOT write things like "registrar@institution.edu", "helpdesk@university.edu", "your-school.edu", "[department]", "[contact]", or any similar template placeholder.
+- If the original article contains a specific email, phone number, URL, person, or department name, copy it exactly into the rewrite. Do not substitute it with a generic alternative.
+- If a specific detail (e.g. a contact email) is missing from the original AND is not in the scraped source content, omit the reference entirely rather than inventing a placeholder.
+- Preserve all existing cedarville.edu links, TDX ticket links, and internal URLs exactly as they appear in the original.
+
 Analyze the following knowledge base article and return a JSON object with this exact structure:
 {{
   "score_clarity": <0-10 float>,
