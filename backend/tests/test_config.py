@@ -9,8 +9,8 @@ def test_settings_loads_from_env():
         "ANTHROPIC_API_KEY": "test-key",
         "TDX_BASE_URL": "https://test.tdx.com/TDWebApi",
         "TDX_APP_ID": "42",
-        "TDX_BEID": "beid-value",
-        "TDX_WEB_SERVICES_KEY": "wskey-value",
+        "TDX_USERNAME": "user@example.com",
+        "TDX_PASSWORD": "password",
     }
     with patch.dict(os.environ, env):
         from config import Settings
@@ -23,4 +23,4 @@ def test_settings_missing_required_raises():
     with patch.dict(os.environ, {}, clear=True):
         from config import Settings
         with pytest.raises(ValidationError):
-            Settings()
+            Settings(_env_file=None)

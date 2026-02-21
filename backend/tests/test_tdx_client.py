@@ -11,13 +11,13 @@ def client():
     return TDXClient(
         base_url=TDX_BASE,
         app_id=42,
-        beid="test-beid",
-        web_services_key="test-wskey",
+        username="test-user",
+        password="test-pass",
     )
 
 @respx.mock
 def test_authenticate_stores_token(client):
-    respx.post(f"{TDX_BASE}/api/auth/loginadmin").mock(
+    respx.post(f"{TDX_BASE}/api/auth/login").mock(
         return_value=httpx.Response(200, json="fake-token-string")
     )
     client.authenticate()
@@ -25,7 +25,7 @@ def test_authenticate_stores_token(client):
 
 @respx.mock
 def test_authenticate_raises_on_failure(client):
-    respx.post(f"{TDX_BASE}/api/auth/loginadmin").mock(
+    respx.post(f"{TDX_BASE}/api/auth/login").mock(
         return_value=httpx.Response(401, text="Unauthorized")
     )
     with pytest.raises(RuntimeError, match="TDX auth failed"):
@@ -94,7 +94,7 @@ def test_401_triggers_reauthentication_and_retry(client):
     ]
 
     # Re-auth endpoint returns a new token
-    respx.post(f"{TDX_BASE}/api/auth/loginadmin").mock(
+    respx.post(f"{TDX_BASE}/api/auth/login").mock(
         return_value=httpx.Response(200, json="new-token")
     )
 

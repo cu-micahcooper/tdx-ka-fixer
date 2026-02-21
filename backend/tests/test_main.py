@@ -8,8 +8,8 @@ def test_health_check():
     mock_settings = MagicMock()
     mock_settings.tdx_base_url = "https://test.tdx.com/TDWebApi"
     mock_settings.tdx_app_id = 42
-    mock_settings.tdx_beid = "beid"
-    mock_settings.tdx_web_services_key = "wskey"
+    mock_settings.tdx_username = "user@example.com"
+    mock_settings.tdx_password = "password"
     mock_settings.anthropic_api_key = "fake-key"
     mock_settings.claude_model = "claude-sonnet-4-6"
     mock_settings.heuristic_threshold = 5.0

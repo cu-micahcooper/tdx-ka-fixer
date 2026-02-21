@@ -22,8 +22,8 @@ async def lifespan(app_: FastAPI):
     tdx = TDXClient(
         base_url=settings.tdx_base_url,
         app_id=settings.tdx_app_id,
-        beid=settings.tdx_beid,
-        web_services_key=settings.tdx_web_services_key,
+        username=settings.tdx_username,
+        password=settings.tdx_password,
     )
     analyzer = ClaudeAnalyzer(
         api_key=settings.anthropic_api_key,

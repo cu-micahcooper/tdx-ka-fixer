@@ -3,16 +3,16 @@ import httpx
 from typing import Optional
 
 class TDXClient:
-    def __init__(self, base_url: str, app_id: int, beid: str, web_services_key: str):
+    def __init__(self, base_url: str, app_id: int, username: str, password: str):
         self.base_url = base_url.rstrip("/")
         self.app_id = app_id
-        self.beid = beid
-        self.web_services_key = web_services_key
+        self.username = username
+        self.password = password
         self.token: Optional[str] = None
 
     def authenticate(self) -> None:
-        url = f"{self.base_url}/api/auth/loginadmin"
-        payload = {"BEID": self.beid, "WebServicesKey": self.web_services_key}
+        url = f"{self.base_url}/api/auth/login"
+        payload = {"UserName": self.username, "Password": self.password}
         with httpx.Client() as http:
             response = http.post(url, json=payload)
         if response.status_code != 200:
