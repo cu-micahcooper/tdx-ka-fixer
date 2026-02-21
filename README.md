@@ -1,93 +1,165 @@
 # TDX KA Fixer
 
+An internal tool for Cedarville University IT that automatically audits, rewrites, and pushes improvements to knowledge base articles in TeamDynamix (TDX). It uses Claude (Anthropic) to score articles across five quality dimensions, generate improved rewrites grounded in live source content, and surface the results in a review queue for staff approval before any change is pushed to TDX.
 
+---
 
-## Getting started
+## How It Works
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+1. **Scan** — The backend fetches all KB articles from TDX, scores each one heuristically (staleness, length, keyword density), and flags low-scoring articles for Claude analysis.
+2. **Analyze** — Claude evaluates each flagged article across five dimensions (clarity, completeness, findability, redundancy, accuracy), identifies specific defects, and proposes a full rewrite. If the article links to any `cedarville.edu` source pages, those are scraped and included as context so the rewrite reflects current information.
+3. **Review** — A staff member reviews a side-by-side diff of the current vs. proposed body in the web UI, then approves, rejects, or skips each item.
+4. **Push** — Approved articles are pushed back to TDX via the API. Changes are logged in the audit trail.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+---
 
-## Add your files
+## Tech Stack
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.11+, FastAPI, SQLAlchemy, SQLite |
+| AI | Anthropic Claude (`claude-sonnet-4-6`) |
+| TDX Integration | TeamDynamix REST API |
+| Frontend | React 19, Vite, Tailwind CSS v4, TanStack Query |
+| Scheduler | APScheduler (nightly heuristic scan) |
 
+---
+
+## Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- A Cedarville University TDX account with API access to the Knowledge Base application
+- An Anthropic API key with sufficient credits
+
+---
+
+## Setup
+
+### 1. Clone the repo
+
+```bash
+git clone https://repo.cedarville.edu/micahcooper/tdx-ka-fixer.git
+cd tdx-ka-fixer
 ```
-cd existing_repo
-git remote add origin https://repo.cedarville.edu/micahcooper/tdx-ka-fixer.git
-git branch -M main
-git push -uf origin main
+
+### 2. Configure environment variables
+
+Copy the example and fill in your credentials:
+
+```bash
+cp .env.example .env
 ```
 
-## Integrate with your tools
+Edit `.env`:
 
-* [Set up project integrations](https://repo.cedarville.edu/micahcooper/tdx-ka-fixer/-/settings/integrations)
+```env
+ANTHROPIC_API_KEY=sk-ant-api03-...
 
-## Collaborate with your team
+# TeamDynamix
+TDX_BASE_URL=https://cedarville.teamdynamix.com/TDWebApi
+TDX_APP_ID=2045
+TDX_USERNAME=your-tdx-username@cedarville.edu
+TDX_PASSWORD=your-tdx-password
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+# Optional overrides (defaults shown)
+SCAN_CRON=0 2 * * *       # nightly at 2 AM
+HEURISTIC_THRESHOLD=5.0   # articles scoring below this are flagged for Claude
+CLAUDE_MODEL=claude-sonnet-4-6
+```
 
-## Test and Deploy
+> `TDX_APP_ID` is the numeric ID of the Knowledge Base application in your TDX instance. For Cedarville it is `2045`. You can find it by listing apps via the TDX API or checking the URL when browsing the KB portal.
 
-Use the built-in continuous integration in GitLab.
+### 3. Set up the backend
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-***
+The SQLite database (`ka_fixer.db`) is created automatically on first run via SQLAlchemy.
 
-# Editing this README
+### 4. Set up the frontend
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+```bash
+cd frontend
+npm install
+```
 
-## Suggestions for a good README
+---
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## Running
 
-## Name
-Choose a self-explaining name for your project.
+### Backend
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn main:app --reload --port 8000
+```
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+The API is available at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Frontend
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+```bash
+cd frontend
+npm run dev
+```
+
+The UI is available at `http://localhost:5173`. API requests are proxied to `http://localhost:8000`.
+
+---
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Dashboard
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+The dashboard shows pending review count, approved-but-not-pushed count, and a summary of the most recent scan. Use the **Trigger Scan** buttons here to kick off a scan on demand:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+- **Heuristic Scan** — Scores all articles and sends only low-scoring ones to Claude. Fast and cheap; good for daily use.
+- **Full Batch Scan** — Sends every article to Claude regardless of heuristic score. Use sparingly (slow, consumes API credits).
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Scans run in the background — the UI won't freeze. Check back or refresh after a few minutes.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+### Review Queue
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Each pending item shows:
+- Article title and a link to view it live in TDX
+- Quality scores across five dimensions (red = below 6, green = 6+)
+- A summary of identified issues and a defect list
+- A side-by-side diff of the current body vs. Claude's proposed rewrite
 
-## License
-For open source projects, say how it is licensed.
+**Approve** — Records the approval and immediately pushes the proposed body to TDX.
+**Reject** — Dismisses the item with an optional note; the article is not changed.
+**Skip** — Defers the item without a decision (useful if you want to return to it later).
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### Article Browser
+
+Browse all synced articles with filters for status (active/archived), category, and heuristic score range. Uses the locally cached copy of article data — run a scan first to populate it.
+
+### Audit Log
+
+Shows all approved changes and their push status (pending / success / failed). If a push failed, the error message is displayed inline and a **Retry** button is available. **Push All Unpushed** retries every pending or failed change at once.
+
+---
+
+## Running Tests
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest
+```
+
+---
+
+## Architecture Notes
+
+- **SQLite with WAL mode** — Enables concurrent reads while a background scan is writing, preventing lock errors in the UI.
+- **Per-article commits** — Each article is committed individually during a scan to release write locks and allow the UI to remain responsive.
+- **Anchor normalization** — Before pushing to TDX, `<h2 id="anchor">` elements are converted to `<a name="anchor"></a><h2>` because TDX's HTML sanitizer strips `id` attributes from block elements, which would break in-page anchor links.
+- **Source scraping** — Articles linking to `cedarville.edu` pages (excluding TDX itself) have those pages scraped at analysis time. The text content is appended to the Claude prompt so rewrites reflect current source material. Up to 3 sources, 3,000 characters each.
+- **Rate limit handling** — Both TDX (60 req/min) and Anthropic APIs are handled gracefully with sleep-until-reset logic and exponential backoff on 429 responses.
