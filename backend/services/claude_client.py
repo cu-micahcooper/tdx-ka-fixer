@@ -1,5 +1,6 @@
 # backend/services/claude_client.py
 import json
+import time
 from dataclasses import dataclass, field
 import anthropic
 
@@ -69,18 +70,27 @@ class ClaudeAnalyzer:
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
 
-    # ~150k chars ≈ 37k tokens, leaves plenty of room for prompt + response
-    _MAX_BODY_CHARS = 150_000
+    # ~25k chars ≈ 6k tokens; keeps total prompt well within 10k token/min limit
+    _MAX_BODY_CHARS = 25_000
 
     def analyze(self, title: str, body: str) -> AnalysisResult:
         if len(body) > self._MAX_BODY_CHARS:
             body = body[:self._MAX_BODY_CHARS] + "\n\n[TRUNCATED — article exceeds analysis limit]"
         prompt = ANALYSIS_PROMPT.format(title=title, body=body)
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        # Retry up to 4 times on rate limit errors with increasing back-off
+        for attempt in range(4):
+            try:
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=4096,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                break
+            except anthropic.RateLimitError as exc:
+                if attempt == 3:
+                    raise
+                wait = 60 * (attempt + 1)  # 60s, 120s, 180s
+                time.sleep(wait)
         raw = response.content[0].text
         data = _extract_json(raw)
         return AnalysisResult(

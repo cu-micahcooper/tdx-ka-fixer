@@ -46,6 +46,9 @@ SAMPLE_ARTICLE = {
 @respx.mock
 def test_list_articles(client):
     client.token = "fake-token"
+    respx.get(f"{TDX_BASE}/api/42/knowledgebase/categories").mock(
+        return_value=httpx.Response(200, json=[{"ID": 1, "Name": "General", "Subcategories": []}])
+    )
     respx.post(f"{TDX_BASE}/api/42/knowledgebase/search").mock(
         return_value=httpx.Response(200, json=[SAMPLE_ARTICLE])
     )
@@ -86,7 +89,12 @@ def test_401_triggers_reauthentication_and_retry(client):
     """A 401 response should cause re-authentication and a successful retry."""
     client.token = "expired-token"
 
-    # First call returns 401; second call (after re-auth) returns 200
+    # list_articles calls list_categories first, then search per category
+    respx.get(f"{TDX_BASE}/api/42/knowledgebase/categories").mock(
+        return_value=httpx.Response(200, json=[{"ID": 1, "Name": "General", "Subcategories": []}])
+    )
+
+    # Search: first call returns 401; second call (after re-auth) returns 200
     search_route = respx.post(f"{TDX_BASE}/api/42/knowledgebase/search")
     search_route.side_effect = [
         httpx.Response(401, text="Unauthorized"),
