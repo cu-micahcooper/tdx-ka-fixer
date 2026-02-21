@@ -3,7 +3,8 @@ import time
 import httpx
 from typing import Optional
 
-_TIMEOUT = httpx.Timeout(30.0)
+_TIMEOUT = httpx.Timeout(60.0)
+_REQUEST_INTERVAL = 1.1  # seconds between requests to avoid TDX throttling
 
 
 class TDXClient:
@@ -33,7 +34,7 @@ class TDXClient:
             response = http.request(method, url, headers=self._headers(), **kwargs)
         if response.status_code == 401:
             self.authenticate()
-            with httpx.Client() as http:
+            with httpx.Client(timeout=_TIMEOUT) as http:
                 response = http.request(method, url, headers=self._headers(), **kwargs)
         # Respect TDX rate limit headers
         remaining = int(response.headers.get("x-ratelimit-remaining", 10))
@@ -64,9 +65,10 @@ class TDXClient:
         articles: list[dict] = []
         url = f"{self.base_url}/api/{self.app_id}/knowledgebase/search"
         for cat in self._flatten_categories(categories):
+            time.sleep(_REQUEST_INTERVAL)
             response = self._request("POST", url, json={"CategoryID": cat["ID"]})
             for article in response.json():
-                if article["ID"] not in seen:
+                if article["ID"] not in seen and article.get("Status") != 5:
                     seen.add(article["ID"])
                     articles.append(article)
         return articles
@@ -87,8 +89,12 @@ class TDXClient:
         return response.json()
 
     def update_article(self, article_id: int, new_body: str) -> dict:
+        # Fetch current article to preserve all required fields
+        current = self.get_article(article_id)
+        current["Body"] = new_body
+        time.sleep(_REQUEST_INTERVAL)
         url = f"{self.base_url}/api/{self.app_id}/knowledgebase/{article_id}"
-        response = self._request("POST", url, json={"Body": new_body})
+        response = self._request("PUT", url, json=current)
         return response.json()
 
     def list_categories(self) -> list[dict]:

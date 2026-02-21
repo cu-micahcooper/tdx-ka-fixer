@@ -10,30 +10,27 @@ const nav = [
 
 export default function Layout() {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      <nav style={{ width: 200, background: '#1e293b', color: '#fff', padding: 16, flexShrink: 0 }}>
-        <h2 style={{ color: '#60a5fa', marginTop: 0, fontSize: 16 }}>TDX KA Fixer</h2>
+    <div className="flex min-h-screen">
+      <nav className="w-52 bg-slate-800 text-white p-4 flex-shrink-0">
+        <h2 className="text-blue-400 mt-0 mb-4 text-base font-semibold tracking-wide">TDX KA Fixer</h2>
         {nav.map(({ to, label }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
-            style={({ isActive }) => ({
-              display: 'block',
-              padding: '8px 12px',
-              color: isActive ? '#60a5fa' : '#cbd5e1',
-              textDecoration: 'none',
-              borderRadius: 4,
-              marginBottom: 4,
-              background: isActive ? '#0f172a' : 'transparent',
-              fontSize: 14,
-            })}
+            className={({ isActive }) =>
+              `block px-3 py-2 rounded text-sm mb-1 no-underline transition-colors ${
+                isActive
+                  ? 'text-blue-400 bg-slate-900'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700'
+              }`
+            }
           >
             {label}
           </NavLink>
         ))}
       </nav>
-      <main style={{ flex: 1, padding: 24, background: '#f8fafc', overflow: 'auto' }}>
+      <main className="flex-1 p-6 bg-slate-50 overflow-auto">
         <Outlet />
       </main>
     </div>

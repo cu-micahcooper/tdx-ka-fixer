@@ -17,44 +17,53 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 style={{ marginTop: 0 }}>Dashboard</h1>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+      <h1 className="mt-0 mb-6 text-2xl font-bold text-slate-800">Dashboard</h1>
+
+      <div className="flex gap-4 mb-8 flex-wrap">
         <StatCard label="Pending Review" value={pending?.length ?? 0} />
         <StatCard label="Approved (not pushed)" value={approved?.length ?? 0} />
         <StatCard label="Total Scans" value={scans?.length ?? 0} />
       </div>
 
-      <section style={{ marginBottom: 24 }}>
-        <h2>Last Scan</h2>
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold text-slate-700 mb-2">Last Scan</h2>
         {lastScan ? (
-          <p style={{ color: '#374151' }}>
+          <p className="text-gray-700">
             Mode: <strong>{lastScan.mode}</strong> &nbsp;|&nbsp;
-            Status: <strong style={{ color: lastScan.status === 'failed' ? '#dc2626' : '#16a34a' }}>{lastScan.status}</strong> &nbsp;|&nbsp;
+            Status:{' '}
+            <strong className={lastScan.status === 'failed' ? 'text-red-600' : 'text-green-600'}>
+              {lastScan.status}
+            </strong> &nbsp;|&nbsp;
             Scanned: {lastScan.articles_scanned} &nbsp;|&nbsp;
             Flagged: {lastScan.articles_flagged} &nbsp;|&nbsp;
             At: {lastScan.started_at ? new Date(lastScan.started_at).toLocaleString() : '—'}
           </p>
-        ) : <p style={{ color: '#64748b' }}>No scans yet.</p>}
+        ) : (
+          <p className="text-slate-500">No scans yet.</p>
+        )}
       </section>
 
       <section>
-        <h2>Trigger Scan</h2>
-        <button
-          onClick={() => trigger.mutate('heuristic')}
-          disabled={trigger.isPending}
-          style={{ marginRight: 12, padding: '8px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}
-        >
-          Run Heuristic Scan
-        </button>
-        <button
-          onClick={() => trigger.mutate('full_batch')}
-          disabled={trigger.isPending}
-          style={{ padding: '8px 20px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}
-        >
-          Run Full Batch Scan
-        </button>
-        {trigger.isPending && <span style={{ marginLeft: 12, color: '#64748b' }}>Running...</span>}
-        {trigger.isError && <span style={{ marginLeft: 12, color: '#dc2626' }}>Scan failed.</span>}
+        <h2 className="text-lg font-semibold text-slate-700 mb-3">Trigger Scan</h2>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => trigger.mutate('heuristic')}
+            disabled={trigger.isPending}
+            className="px-5 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Run Heuristic Scan
+          </button>
+          <button
+            onClick={() => trigger.mutate('full_batch')}
+            disabled={trigger.isPending}
+            className="px-5 py-2 bg-violet-500 text-white rounded-md text-sm font-medium hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Run Full Batch Scan
+          </button>
+          {trigger.isPending && <span className="text-slate-500 text-sm">Starting scan...</span>}
+          {trigger.isError && <span className="text-red-600 text-sm">Failed to start scan.</span>}
+          {trigger.isSuccess && <span className="text-green-600 text-sm">Scan started.</span>}
+        </div>
       </section>
     </div>
   )
@@ -62,12 +71,9 @@ export default function Dashboard() {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div style={{
-      background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
-      padding: '16px 24px', minWidth: 160, textAlign: 'center',
-    }}>
-      <div style={{ fontSize: 32, fontWeight: 700, color: '#1e293b' }}>{value}</div>
-      <div style={{ color: '#64748b', fontSize: 13 }}>{label}</div>
+    <div className="bg-white border border-slate-200 rounded-lg px-6 py-4 min-w-40 text-center shadow-sm">
+      <div className="text-3xl font-bold text-slate-800">{value}</div>
+      <div className="text-slate-500 text-sm mt-1">{label}</div>
     </div>
   )
 }

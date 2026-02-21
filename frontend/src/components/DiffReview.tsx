@@ -8,17 +8,14 @@ interface Props {
   onSkip: (id: number) => void
 }
 
-const tierColor: Record<string, string> = {
-  auto: '#16a34a',
-  confirm: '#d97706',
-  admin: '#dc2626',
+const tierBadge: Record<string, string> = {
+  auto: 'bg-green-600',
+  confirm: 'bg-amber-500',
+  admin: 'bg-red-600',
 }
 
 export default function DiffReview({ item, onApprove, onReject, onSkip }: Props) {
-  const defects: string[] = (() => {
-    try { return JSON.parse(item.analysis.defects_json) } catch { return [] }
-  })()
-
+  const defects: string[] = item.analysis.defects ?? []
   const scores: Record<string, number> = {
     clarity: item.analysis.score_clarity,
     completeness: item.analysis.score_completeness,
@@ -28,37 +25,46 @@ export default function DiffReview({ item, onApprove, onReject, onSkip }: Props)
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 24, marginBottom: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+    <div className="bg-white border border-slate-200 rounded-lg p-6 mb-6 shadow-sm">
+      <div className="flex justify-between items-start mb-3">
         <div>
-          <h2 style={{ margin: '0 0 4px' }}>{item.article.title}</h2>
-          <span style={{ fontSize: 13, color: '#64748b' }}>
+          <h2 className="text-lg font-bold text-slate-800 m-0 mb-1">
+            {item.article.title}
+            {item.article.tdx_url && (
+              <a
+                href={item.article.tdx_url}
+                target="_blank"
+                rel="noreferrer"
+                className="ml-3 text-sm font-normal text-blue-500 hover:text-blue-700 no-underline"
+              >
+                View in TDX ↗
+              </a>
+            )}
+          </h2>
+          <span className="text-sm text-slate-500">
             {item.article.category_name ?? 'Uncategorized'} &nbsp;|&nbsp;
-            Overall: <strong>{item.analysis.overall_score.toFixed(1)}</strong>
+            Overall: <strong className="text-slate-700">{item.analysis.overall_score.toFixed(1)}</strong>
           </span>
         </div>
-        <span style={{
-          background: tierColor[item.analysis.approval_tier] ?? '#64748b',
-          color: '#fff', padding: '4px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600,
-        }}>
+        <span className={`${tierBadge[item.analysis.approval_tier] ?? 'bg-slate-500'} text-white px-3 py-1 rounded-full text-xs font-semibold`}>
           {item.analysis.approval_tier.toUpperCase()}
         </span>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
-        {(['clarity','completeness','findability','redundancy','accuracy'] as const).map(dim => (
-          <div key={dim} style={{ textAlign: 'center', minWidth: 70 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: scores[dim] < 6 ? '#ef4444' : '#16a34a' }}>
+      <div className="flex gap-5 mb-3 flex-wrap">
+        {(['clarity', 'completeness', 'findability', 'redundancy', 'accuracy'] as const).map(dim => (
+          <div key={dim} className="text-center min-w-[60px]">
+            <div className={`text-xl font-bold ${scores[dim] < 6 ? 'text-red-500' : 'text-green-600'}`}>
               {scores[dim].toFixed(1)}
             </div>
-            <div style={{ fontSize: 11, color: '#64748b', textTransform: 'capitalize' }}>{dim}</div>
+            <div className="text-xs text-slate-500 capitalize">{dim}</div>
           </div>
         ))}
       </div>
 
-      <p style={{ color: '#374151', marginBottom: 8 }}><strong>Issues:</strong> {item.analysis.issue_summary}</p>
+      <p className="text-gray-700 mb-2"><strong>Issues:</strong> {item.analysis.issue_summary}</p>
       {defects.length > 0 && (
-        <ul style={{ color: '#6b7280', fontSize: 13, marginBottom: 16 }}>
+        <ul className="text-slate-500 text-sm mb-4 pl-5 space-y-1">
           {defects.map((d, i) => <li key={`defect-${i}-${d.slice(0, 20)}`}>{d}</li>)}
         </ul>
       )}
@@ -71,20 +77,26 @@ export default function DiffReview({ item, onApprove, onReject, onSkip }: Props)
         rightTitle="Proposed"
       />
 
-      <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-        <button onClick={() => onApprove(item.id)}
-          style={{ padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
+      <div className="flex gap-3 mt-4">
+        <button
+          onClick={() => onApprove(item.id)}
+          className="px-5 py-2 bg-green-600 text-white rounded-md font-semibold text-sm hover:bg-green-700"
+        >
           Approve
         </button>
-        <button onClick={() => {
-          const note = window.prompt('Rejection reason (optional):') ?? ''
-          onReject(item.id, note)
-        }}
-          style={{ padding: '8px 20px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
+        <button
+          onClick={() => {
+            const note = window.prompt('Rejection reason (optional):') ?? ''
+            onReject(item.id, note)
+          }}
+          className="px-5 py-2 bg-red-600 text-white rounded-md font-semibold text-sm hover:bg-red-700"
+        >
           Reject
         </button>
-        <button onClick={() => onSkip(item.id)}
-          style={{ padding: '8px 20px', background: '#64748b', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>
+        <button
+          onClick={() => onSkip(item.id)}
+          className="px-5 py-2 bg-slate-500 text-white rounded-md font-semibold text-sm hover:bg-slate-600"
+        >
           Skip
         </button>
       </div>

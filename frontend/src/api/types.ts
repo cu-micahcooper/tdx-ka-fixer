@@ -8,6 +8,7 @@ export interface Article {
   modified_at: string | null
   heuristic_score: number
   status: string
+  tdx_url?: string
 }
 
 export interface AnalysisResult {
@@ -20,7 +21,7 @@ export interface AnalysisResult {
   score_redundancy: number
   score_accuracy: number
   issue_summary: string
-  defects_json: string
+  defects: string[]
   proposed_body: string
   approval_tier: 'auto' | 'confirm' | 'admin'
   analyzed_at: string | null

@@ -36,7 +36,7 @@ class ScanEngine:
             modified_at=_parse_date(raw.get("ModifiedDate")),
             view_count=raw.get("NumViews", 0),
             last_synced_at=datetime.now(timezone.utc).replace(tzinfo=None),
-            status="active" if raw.get("IsActive", True) else "archived",
+            status="archived" if raw.get("Status") == 5 else "active",
         )
         if article:
             for k, v in data.items():
@@ -80,7 +80,7 @@ class ScanEngine:
     def run_heuristic_scan(self) -> ScanJob:
         job = ScanJob(mode="heuristic")
         self.db.add(job)
-        self.db.flush()
+        self.db.commit()  # commit immediately so job is visible during scan
         try:
             raw_articles = self.tdx.list_articles()
             flagged = 0
@@ -94,9 +94,11 @@ class ScanEngine:
                 }
                 score = self.heuristic.score(article_dict)
                 article.heuristic_score = score
+                self.db.commit()  # release write lock between articles
                 if self.heuristic.needs_review(article_dict):
                     if self._analyze_and_queue(article):
                         flagged += 1
+                        self.db.commit()
             job.articles_scanned = len(raw_articles)
             job.articles_flagged = flagged
             job.status = "complete"
@@ -112,14 +114,16 @@ class ScanEngine:
     def run_full_batch_scan(self) -> ScanJob:
         job = ScanJob(mode="full_batch")
         self.db.add(job)
-        self.db.flush()
+        self.db.commit()  # commit immediately so job is visible during scan
         try:
             raw_articles = self.tdx.list_articles()
             flagged = 0
             for raw in raw_articles:
                 article = self._sync_article(raw)
+                self.db.commit()  # release write lock between articles
                 if self._analyze_and_queue(article):
                     flagged += 1
+                    self.db.commit()
             job.articles_scanned = len(raw_articles)
             job.articles_flagged = flagged
             job.status = "complete"

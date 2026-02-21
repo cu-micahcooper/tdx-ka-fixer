@@ -1,7 +1,29 @@
 # backend/services/push_service.py
+import re
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from models import ApprovedChange, Article, AuditLog
+
+
+def _normalize_anchors(html: str) -> str:
+    """
+    TDX sanitizes HTML and strips `id` attributes from block elements, which
+    breaks in-page anchor links like <a href="#section">.
+
+    Convert <hN id="foo"> to <a name="foo"></a><hN> so the anchor target
+    survives TDX's sanitizer. The `name` attribute on <a> tags is preserved.
+    """
+    def _replace(m: re.Match) -> str:
+        tag = m.group(1)           # e.g. "h2"
+        anchor_id = m.group(2)     # e.g. "stack3plus"
+        rest = re.sub(r'\s+id="[^"]*"', '', m.group(3))  # attrs minus id
+        return f'<a name="{anchor_id}"></a><{tag}{rest}>'
+
+    return re.sub(
+        r'<(h[1-6])\s[^>]*\bid="([^"]+)"([^>]*)>',
+        _replace,
+        html,
+    )
 
 
 class PushService:
@@ -14,9 +36,11 @@ class PushService:
         if not change:
             raise ValueError(f"ApprovedChange {approved_change_id} not found")
         article = self.db.get(Article, change.article_id)
+        tdx_body = _normalize_anchors(change.approved_body)
         try:
-            self.tdx.update_article(article.tdx_id, change.approved_body)
+            self.tdx.update_article(article.tdx_id, tdx_body)
             change.push_status = "success"
+            change.push_error = None
             change.pushed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             article.body = change.approved_body
             log = AuditLog(
@@ -37,13 +61,14 @@ class PushService:
             raise
 
     def push_all_pending(self) -> list[AuditLog]:
-        pending = (
+        """Push all approved changes that haven't been successfully pushed yet (pending or failed)."""
+        unpushed = (
             self.db.query(ApprovedChange)
-            .filter_by(push_status="pending")
+            .filter(ApprovedChange.push_status.in_(["pending", "failed"]))
             .all()
         )
         results = []
-        for c in pending:
+        for c in unpushed:
             try:
                 results.append(self.push(c.id))
             except Exception:

@@ -27,17 +27,17 @@ export default function ReviewQueue() {
     onSuccess: invalidate,
   })
 
-  if (isLoading) return <p>Loading queue...</p>
+  if (isLoading) return <p className="text-slate-500">Loading queue...</p>
 
   return (
     <div>
-      <h1 style={{ marginTop: 0 }}>
-        Review Queue
-        <span style={{ fontSize: 15, fontWeight: 400, color: '#64748b', marginLeft: 8 }}>
-          ({items?.length ?? 0} pending)
-        </span>
+      <h1 className="mt-0 mb-6 text-2xl font-bold text-slate-800">
+        Review Queue{' '}
+        <span className="text-base font-normal text-slate-500">({items?.length ?? 0} pending)</span>
       </h1>
-      {items?.length === 0 && <p style={{ color: '#64748b' }}>Queue is empty — run a scan to populate it.</p>}
+      {items?.length === 0 && (
+        <p className="text-slate-500">Queue is empty — run a scan to populate it.</p>
+      )}
       {items?.map(item => (
         <DiffReview
           key={item.id}
