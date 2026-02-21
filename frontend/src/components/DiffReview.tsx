@@ -19,6 +19,14 @@ export default function DiffReview({ item, onApprove, onReject, onSkip }: Props)
     try { return JSON.parse(item.analysis.defects_json) } catch { return [] }
   })()
 
+  const scores: Record<string, number> = {
+    clarity: item.analysis.score_clarity,
+    completeness: item.analysis.score_completeness,
+    findability: item.analysis.score_findability,
+    redundancy: item.analysis.score_redundancy,
+    accuracy: item.analysis.score_accuracy,
+  }
+
   return (
     <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 24, marginBottom: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
@@ -40,8 +48,8 @@ export default function DiffReview({ item, onApprove, onReject, onSkip }: Props)
       <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
         {(['clarity','completeness','findability','redundancy','accuracy'] as const).map(dim => (
           <div key={dim} style={{ textAlign: 'center', minWidth: 70 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: (item.analysis[`score_${dim}`] as number) < 6 ? '#ef4444' : '#16a34a' }}>
-              {(item.analysis[`score_${dim}`] as number).toFixed(1)}
+            <div style={{ fontSize: 18, fontWeight: 700, color: scores[dim] < 6 ? '#ef4444' : '#16a34a' }}>
+              {scores[dim].toFixed(1)}
             </div>
             <div style={{ fontSize: 11, color: '#64748b', textTransform: 'capitalize' }}>{dim}</div>
           </div>
@@ -51,7 +59,7 @@ export default function DiffReview({ item, onApprove, onReject, onSkip }: Props)
       <p style={{ color: '#374151', marginBottom: 8 }}><strong>Issues:</strong> {item.analysis.issue_summary}</p>
       {defects.length > 0 && (
         <ul style={{ color: '#6b7280', fontSize: 13, marginBottom: 16 }}>
-          {defects.map((d, i) => <li key={i}>{d}</li>)}
+          {defects.map((d, i) => <li key={`defect-${i}-${d.slice(0, 20)}`}>{d}</li>)}
         </ul>
       )}
 
