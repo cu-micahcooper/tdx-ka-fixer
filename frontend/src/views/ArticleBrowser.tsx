@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listArticles } from '../api/articles'
 
 const selectCls = 'px-3 py-2 text-sm border border-slate-200 rounded-md bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
@@ -21,11 +21,13 @@ const tdxStatusColor: Record<number, string> = {
 
 export default function ArticleBrowser() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
   const [search, setSearch] = useState('')
-  const [tdxStatusFilter, setTdxStatusFilter] = useState<string>('') // '1'|'2'|'3'|'5' | ''
-  const [publicFilter, setPublicFilter] = useState<string>('')       // 'true' | 'false' | ''
-  const [categoryFilter, setCategoryFilter] = useState<string>('')
-  const [scoreFilter, setScoreFilter] = useState<string>('')
+  const [tdxStatusFilter, setTdxStatusFilter] = useState<string>(searchParams.get('tdx_status') ?? '')
+  const [publicFilter, setPublicFilter] = useState<string>(searchParams.get('is_public') ?? '')
+  const [categoryFilter, setCategoryFilter] = useState<string>(searchParams.get('category') ?? '')
+  const [scoreFilter, setScoreFilter] = useState<string>(searchParams.get('score') ?? '')
 
   const queryParams = {
     ...(tdxStatusFilter ? { tdx_status: Number(tdxStatusFilter) } : {}),

@@ -1,4 +1,4 @@
-# TDX KA Fixer
+# TDX KA Tuna
 
 An internal tool for Cedarville University IT that automatically audits, rewrites, and pushes improvements to knowledge base articles in TeamDynamix (TDX). It uses Claude (Anthropic) to score articles across five quality dimensions, generate improved rewrites grounded in live source content, and surface the results in a review queue for staff approval before any change is pushed to TDX.
 

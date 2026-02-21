@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { listScans, triggerScan } from '../api/scans'
 import { listQueue } from '../api/queue'
 import { getStats } from '../api/stats'
@@ -45,6 +46,7 @@ export default function Dashboard() {
     },
   })
 
+  const navigate = useNavigate()
   const lastScan = scans?.[0]
 
   return (
@@ -53,10 +55,10 @@ export default function Dashboard() {
 
       {/* Top stat cards */}
       <div className="flex gap-4 mb-8 flex-wrap">
-        <StatCard label="Total Articles" value={stats?.total_articles ?? 0} />
-        <StatCard label="Pending Review" value={pending?.length ?? 0} color="text-amber-600" />
-        <StatCard label="Approved (not pushed)" value={approved?.length ?? 0} color="text-green-600" />
-        <StatCard label="Needs Review" value={stats?.needs_review_count ?? 0} color="text-red-500" />
+        <StatCard label="Total Articles" value={stats?.total_articles ?? 0} onClick={() => navigate('/browser')} />
+        <StatCard label="Pending Review" value={pending?.length ?? 0} color="text-amber-600" onClick={() => navigate('/queue')} />
+        <StatCard label="Approved (not pushed)" value={approved?.length ?? 0} color="text-green-600" onClick={() => navigate('/audit')} />
+        <StatCard label="Needs Review" value={stats?.needs_review_count ?? 0} color="text-red-500" onClick={() => navigate('/browser?score=low')} />
         {stats?.avg_heuristic_score != null && (
           <StatCard label="Avg Quality Score" value={stats.avg_heuristic_score} decimals={1} />
         )}
@@ -80,7 +82,7 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {(stats?.by_publish_status ?? []).map(s => (
-                <tr key={s.tdx_status ?? 'null'} className="border-t border-slate-100 hover:bg-slate-50">
+                <tr key={s.tdx_status ?? 'null'} onClick={() => s.tdx_status != null && navigate(`/browser?tdx_status=${s.tdx_status}`)} className={`border-t border-slate-100 hover:bg-blue-50 ${s.tdx_status != null ? 'cursor-pointer' : ''}`}>
                   <td className="px-4 py-2.5">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${s.tdx_status != null ? (tdxStatusColor[s.tdx_status] ?? 'bg-slate-100 text-slate-600') : 'bg-slate-100 text-slate-400'}`}>
                       {s.label}
@@ -115,7 +117,7 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {(stats?.by_visibility ?? []).map(v => (
-                <tr key={String(v.is_public)} className="border-t border-slate-100 hover:bg-slate-50">
+                <tr key={String(v.is_public)} onClick={() => navigate(`/browser?is_public=${v.is_public}`)} className="border-t border-slate-100 hover:bg-blue-50 cursor-pointer">
                   <td className="px-4 py-2.5">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${v.is_public ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
                       {v.label}
@@ -156,7 +158,7 @@ export default function Dashboard() {
               {(stats?.by_category ?? []).map((c: CategoryStat) => {
                 const pctReview = c.count > 0 ? Math.round((c.needs_review / c.count) * 100) : 0
                 return (
-                  <tr key={c.category_name} className="border-t border-slate-100 hover:bg-slate-50">
+                  <tr key={c.category_name} onClick={() => navigate(`/browser?category=${encodeURIComponent(c.category_name)}`)} className="border-t border-slate-100 hover:bg-blue-50 cursor-pointer">
                     <td className="px-4 py-2 text-sm text-slate-700">{c.category_name}</td>
                     <td className="px-4 py-2 text-sm text-right text-slate-600">{c.count}</td>
                     <td className="px-4 py-2 text-sm text-right">
@@ -228,15 +230,19 @@ export default function Dashboard() {
 }
 
 function StatCard({
-  label, value, color = 'text-slate-800', decimals = 0
+  label, value, color = 'text-slate-800', decimals = 0, onClick,
 }: {
   label: string
   value: number
   color?: string
   decimals?: number
+  onClick?: () => void
 }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-lg px-6 py-4 min-w-40 text-center shadow-sm">
+    <div
+      onClick={onClick}
+      className={`bg-white border border-slate-200 rounded-lg px-6 py-4 min-w-40 text-center shadow-sm transition-colors ${onClick ? 'cursor-pointer hover:bg-blue-50 hover:border-blue-200' : ''}`}
+    >
       <div className={`text-3xl font-bold ${color}`}>
         {decimals > 0 ? value.toFixed(decimals) : value.toLocaleString()}
       </div>

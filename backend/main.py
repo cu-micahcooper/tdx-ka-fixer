@@ -47,7 +47,7 @@ async def lifespan(app_: FastAPI):
     stop_scheduler()
 
 
-app = FastAPI(title="TDX KA Fixer", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="TDX KA Tuna", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
