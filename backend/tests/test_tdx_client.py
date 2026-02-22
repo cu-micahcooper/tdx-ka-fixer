@@ -2,6 +2,7 @@
 import pytest
 import respx
 import httpx
+from unittest.mock import patch
 from services.tdx_client import TDXClient
 
 TDX_BASE = "https://test.tdx.com/TDWebApi"
@@ -68,10 +69,15 @@ def test_get_article(client):
 @respx.mock
 def test_update_article(client):
     client.token = "fake-token"
-    respx.post(f"{TDX_BASE}/api/42/knowledgebase/123").mock(
+    # update_article first fetches the current article (GET), then PUTs the updated version
+    respx.get(f"{TDX_BASE}/api/42/knowledgebase/123").mock(
+        return_value=httpx.Response(200, json=SAMPLE_ARTICLE)
+    )
+    respx.put(f"{TDX_BASE}/api/42/knowledgebase/123").mock(
         return_value=httpx.Response(200, json={**SAMPLE_ARTICLE, "Body": "New body"})
     )
-    result = client.update_article(123, "New body")
+    with patch("time.sleep"):
+        result = client.update_article(123, "New body")
     assert result["Body"] == "New body"
 
 @respx.mock
@@ -94,11 +100,13 @@ def test_401_triggers_reauthentication_and_retry(client):
         return_value=httpx.Response(200, json=[{"ID": 1, "Name": "General", "Subcategories": []}])
     )
 
-    # Search: first call returns 401; second call (after re-auth) returns 200
+    # Search: first call returns 401; second (retry after re-auth) returns 200.
+    # list_articles makes 1 category search + 10 supplemental keyword searches = 11 total.
     search_route = respx.post(f"{TDX_BASE}/api/42/knowledgebase/search")
     search_route.side_effect = [
-        httpx.Response(401, text="Unauthorized"),
-        httpx.Response(200, json=[SAMPLE_ARTICLE]),
+        httpx.Response(401, text="Unauthorized"),   # category search — triggers re-auth
+        httpx.Response(200, json=[SAMPLE_ARTICLE]), # retry after re-auth
+        *[httpx.Response(200, json=[])] * 10,       # 10 supplemental keyword searches
     ]
 
     # Re-auth endpoint returns a new token
@@ -106,7 +114,8 @@ def test_401_triggers_reauthentication_and_retry(client):
         return_value=httpx.Response(200, text="new-token")
     )
 
-    articles = client.list_articles()
+    with patch("time.sleep"):
+        articles = client.list_articles()
     assert client.token == "new-token"
     assert len(articles) == 1
     assert articles[0]["ID"] == 123
