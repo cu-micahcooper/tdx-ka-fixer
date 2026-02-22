@@ -56,13 +56,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routers import articles, queue, scans, audit, stats
+from routers import articles, queue, scans, audit, stats, settings as settings_router
 app.include_router(articles.router)
 app.include_router(queue.router)
 app.include_router(scans.router)
 app.include_router(audit.router)
 app.include_router(push_router.router)
 app.include_router(stats.router)
+app.include_router(settings_router.router)
 
 
 @app.get("/health")
