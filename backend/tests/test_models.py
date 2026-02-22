@@ -75,3 +75,12 @@ def test_scan_job_create(db):
     db.commit()
     assert job.id is not None
     assert job.mode == "heuristic"
+
+def test_app_settings_defaults(db):
+    from models import AppSettings
+    row = AppSettings()
+    db.add(row)
+    db.commit()
+    assert row.id is not None
+    assert row.internal_directive == ""
+    assert row.public_directive == ""

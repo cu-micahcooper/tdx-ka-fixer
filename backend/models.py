@@ -93,3 +93,9 @@ class ScanJob(Base):
     articles_flagged = Column(Integer, default=0)
     status = Column(String, default="running")
     error = Column(Text)
+
+class AppSettings(Base):
+    __tablename__ = "app_settings"
+    id = Column(Integer, primary_key=True)
+    internal_directive = Column(Text, nullable=False, default="")
+    public_directive = Column(Text, nullable=False, default="")
