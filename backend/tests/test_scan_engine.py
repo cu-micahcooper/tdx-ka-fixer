@@ -20,7 +20,7 @@ RAW_ARTICLE_BAD = {
     "CategoryID": 1, "CategoryName": "Cat",
     "CreatedDate": "2023-01-01T00:00:00Z",
     "ModifiedDate": "2023-01-01T00:00:00Z",
-    "NumViews": 2, "IsActive": True,
+    "NumViews": 2, "IsActive": True, "IsPublic": False,
 }
 
 RAW_ARTICLE_GOOD = {
@@ -108,6 +108,52 @@ def test_no_duplicate_queue_entries_on_rescan(db):
     engine.run_heuristic_scan()
     engine.run_heuristic_scan()
     assert db.query(ReviewQueue).count() == 1  # no duplicate
+
+def test_internal_article_uses_internal_directive(db):
+    """Non-public articles should pass the internal_directive to analyze()."""
+    from models import AppSettings
+    db.add(AppSettings(internal_directive="INTERNAL DIR", public_directive="PUBLIC DIR"))
+    db.commit()
+
+    tdx = MagicMock()
+    raw = {**RAW_ARTICLE_BAD, "IsPublic": False}
+    tdx.list_articles.return_value = [raw]
+    analyzer = make_mock_analyzer()
+    engine = ScanEngine(db=db, tdx_client=tdx, analyzer=analyzer)
+    engine.run_heuristic_scan()
+
+    _, kwargs = analyzer.analyze.call_args
+    assert kwargs.get("directive") == "INTERNAL DIR"
+
+
+def test_public_article_uses_public_directive(db):
+    """Public articles should pass the public_directive to analyze()."""
+    from models import AppSettings
+    db.add(AppSettings(internal_directive="INTERNAL DIR", public_directive="PUBLIC DIR"))
+    db.commit()
+
+    tdx = MagicMock()
+    raw = {**RAW_ARTICLE_BAD, "IsPublic": True}
+    tdx.list_articles.return_value = [raw]
+    analyzer = make_mock_analyzer()
+    engine = ScanEngine(db=db, tdx_client=tdx, analyzer=analyzer)
+    engine.run_heuristic_scan()
+
+    _, kwargs = analyzer.analyze.call_args
+    assert kwargs.get("directive") == "PUBLIC DIR"
+
+
+def test_missing_settings_row_uses_empty_directive(db):
+    """If AppSettings row doesn't exist, analyze() is called with directive=''."""
+    tdx = MagicMock()
+    tdx.list_articles.return_value = [RAW_ARTICLE_BAD]
+    analyzer = make_mock_analyzer()
+    engine = ScanEngine(db=db, tdx_client=tdx, analyzer=analyzer)
+    engine.run_heuristic_scan()
+
+    _, kwargs = analyzer.analyze.call_args
+    assert kwargs.get("directive") == ""
+
 
 def test_full_batch_scan_flagged_count_excludes_already_queued(db):
     """articles_flagged should only count newly-queued articles, not skipped ones."""

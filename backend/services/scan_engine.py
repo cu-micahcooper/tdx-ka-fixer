@@ -2,7 +2,7 @@
 import json
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from models import Article, AnalysisResult, ReviewQueue, ScanJob
+from models import Article, AnalysisResult, ReviewQueue, ScanJob, AppSettings
 from services.scanner import HeuristicScanner
 from services.tdx_client import TDXClient
 from services.claude_client import ClaudeAnalyzer
@@ -50,7 +50,13 @@ class ScanEngine:
         self.db.flush()
         return article
 
-    def _analyze_and_queue(self, article: Article) -> bool:
+    def _load_directive(self, is_public: bool) -> str:
+        row = self.db.query(AppSettings).first()
+        if row is None:
+            return ""
+        return row.public_directive if is_public else row.internal_directive
+
+    def _analyze_and_queue(self, article: Article, directive: str = "") -> bool:
         # Skip if already pending in queue; return False to indicate no new entry
         existing = (
             self.db.query(ReviewQueue)
@@ -59,7 +65,7 @@ class ScanEngine:
         )
         if existing:
             return False
-        result = self.analyzer.analyze(title=article.title, body=article.body)
+        result = self.analyzer.analyze(title=article.title, body=article.body, directive=directive)
         analysis = AnalysisResult(
             article_id=article.id,
             model_used=getattr(self.analyzer, "model", "unknown"),
@@ -99,7 +105,8 @@ class ScanEngine:
                 article.heuristic_score = score
                 self.db.commit()  # release write lock between articles
                 if self.heuristic.needs_review(article_dict):
-                    if self._analyze_and_queue(article):
+                    directive = self._load_directive(bool(article.is_public))
+                    if self._analyze_and_queue(article, directive=directive):
                         flagged += 1
                         self.db.commit()
             job.articles_scanned = len(raw_articles)
@@ -124,7 +131,8 @@ class ScanEngine:
             for raw in raw_articles:
                 article = self._sync_article(raw)
                 self.db.commit()  # release write lock between articles
-                if self._analyze_and_queue(article):
+                directive = self._load_directive(bool(article.is_public))
+                if self._analyze_and_queue(article, directive=directive):
                     flagged += 1
                     self.db.commit()
             job.articles_scanned = len(raw_articles)
