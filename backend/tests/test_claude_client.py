@@ -52,3 +52,26 @@ def test_analyze_handles_markdown_code_fences():
     with patch.object(analyzer.client.messages, "create", return_value=mock_response):
         result = analyzer.analyze(title="Test", body="Content")
     assert result.score_clarity == 6.0
+
+def test_analyze_injects_directive_into_prompt(monkeypatch):
+    """The directive text should appear in the prompt sent to Claude."""
+    captured = {}
+
+    class FakeMessages:
+        def create(self, **kwargs):
+            captured["prompt"] = kwargs["messages"][0]["content"]
+            from unittest.mock import MagicMock
+            msg = MagicMock()
+            msg.content = [MagicMock(text='{"score_clarity":7.0,"score_completeness":7.0,"score_findability":7.0,"score_redundancy":7.0,"score_accuracy":7.0,"overall_score":7.0,"issue_summary":"ok","defects":[],"proposed_body":"<p>body</p>","approval_tier":"confirm"}')]
+            return msg
+
+    class FakeClient:
+        messages = FakeMessages()
+
+    import anthropic
+    monkeypatch.setattr(anthropic, "Anthropic", lambda **kw: FakeClient())
+
+    from services.claude_client import ClaudeAnalyzer
+    analyzer = ClaudeAnalyzer(api_key="test")
+    analyzer.analyze(title="T", body="B", directive="MY CUSTOM DIRECTIVE")
+    assert "MY CUSTOM DIRECTIVE" in captured["prompt"]

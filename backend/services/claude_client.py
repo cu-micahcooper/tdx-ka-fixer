@@ -13,15 +13,7 @@ ANALYSIS_PROMPT = """You are a knowledge base quality analyst operating within t
 
 ## Institutional Context
 
-This knowledge base belongs to Cedarville University — a private Christian liberal arts university in Cedarville, Ohio.
-The articles support students, faculty, and staff seeking IT help.
-
-Key facts to reflect in rewrites:
-- The IT help desk uses TeamDynamix (TDX) for ticketing and this knowledge base.
-- Common systems in use: Microsoft 365 (Outlook, Teams, OneDrive, SharePoint), Banner (ERP/student information), Blackboard/Canvas (LMS), Duo (MFA), GlobalProtect VPN, CU-managed Windows and Mac devices.
-- Users are a campus community — write in plain, friendly language appropriate for a university help desk. Avoid jargon; define acronyms on first use.
-- Links to cedarville.edu resources should be preserved and treated as authoritative.
-- If scraped source content is provided, use it to ensure accuracy and completeness — do not fabricate steps or policy details.
+{directive}
 
 ## Critical rewrite rules
 
@@ -157,7 +149,7 @@ class ClaudeAnalyzer:
     # ~25k chars ≈ 6k tokens; keeps total prompt well within 10k token/min limit
     _MAX_BODY_CHARS = 25_000
 
-    def analyze(self, title: str, body: str) -> AnalysisResult:
+    def analyze(self, title: str, body: str, directive: str = "") -> AnalysisResult:
         if len(body) > self._MAX_BODY_CHARS:
             body = body[:self._MAX_BODY_CHARS] + "\n\n[TRUNCATED — article exceeds analysis limit]"
 
@@ -177,7 +169,7 @@ class ClaudeAnalyzer:
         else:
             sources_block = ""
 
-        prompt = ANALYSIS_PROMPT.format(title=title, body=body, sources=sources_block)
+        prompt = ANALYSIS_PROMPT.format(title=title, body=body, sources=sources_block, directive=directive)
         # Retry up to 4 times on rate limit errors with increasing back-off
         for attempt in range(4):
             try:
