@@ -13,7 +13,7 @@ source "$REPO/backend/.venv/bin/activate"
 # Backend
 osascript -e "
   tell application \"Terminal\"
-    do script \"source '$REPO/backend/.venv/bin/activate' && uvicorn main:app --reload --app-dir '$REPO/backend'\"
+    do script \"cd '$REPO/backend' && source .venv/bin/activate && uvicorn main:app --reload\"
   end tell
 "
 
