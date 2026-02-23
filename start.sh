@@ -8,7 +8,7 @@ lsof -ti :8000 -ti :5173 | xargs kill -9 2>/dev/null
 
 # Ensure DB schema is up to date (safe to run repeatedly)
 source "$REPO/backend/.venv/bin/activate"
-python -c "from database import engine; from models import Base; Base.metadata.create_all(engine)"
+(cd "$REPO/backend" && python -c "from database import engine; from models import Base; Base.metadata.create_all(engine)")
 
 # Backend
 osascript -e "
