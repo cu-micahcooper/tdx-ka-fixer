@@ -95,8 +95,10 @@ class ScanEngine:
         self.db.commit()  # commit immediately so job is visible during scan
         try:
             raw_articles = self.tdx.list_articles()
+            job.articles_total = len(raw_articles)
+            self.db.commit()
             flagged = 0
-            for raw in raw_articles:
+            for i, raw in enumerate(raw_articles):
                 article = self._sync_article(raw)
                 article_dict = {
                     "body": article.body,
@@ -106,13 +108,13 @@ class ScanEngine:
                 }
                 score = self.heuristic.score(article_dict)
                 article.heuristic_score = score
+                job.articles_scanned = i + 1
                 self.db.commit()  # release write lock between articles
                 if self.heuristic.needs_review(article_dict):
                     directive = self._load_directive(bool(article.is_public))
                     if self._analyze_and_queue(article, directive=directive):
                         flagged += 1
                         self.db.commit()
-            job.articles_scanned = len(raw_articles)
             job.articles_flagged = flagged
             job.status = "complete"
             job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -130,15 +132,17 @@ class ScanEngine:
         self.db.commit()  # commit immediately so job is visible during scan
         try:
             raw_articles = self.tdx.list_articles()
+            job.articles_total = len(raw_articles)
+            self.db.commit()
             flagged = 0
-            for raw in raw_articles:
+            for i, raw in enumerate(raw_articles):
                 article = self._sync_article(raw)
+                job.articles_scanned = i + 1
                 self.db.commit()  # release write lock between articles
                 directive = self._load_directive(bool(article.is_public))
                 if self._analyze_and_queue(article, directive=directive):
                     flagged += 1
                     self.db.commit()
-            job.articles_scanned = len(raw_articles)
             job.articles_flagged = flagged
             job.status = "complete"
             job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)

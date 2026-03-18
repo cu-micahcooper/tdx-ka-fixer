@@ -49,6 +49,7 @@ export interface ScanJob {
   status: 'running' | 'complete' | 'failed'
   started_at: string | null
   completed_at: string | null
+  articles_total: number
   articles_scanned: number
   articles_flagged: number
   error: string | null

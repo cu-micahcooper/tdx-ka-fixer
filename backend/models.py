@@ -90,6 +90,7 @@ class ScanJob(Base):
     started_at = Column(DateTime, server_default=func.now())
     completed_at = Column(DateTime)
     mode = Column(String, nullable=False)
+    articles_total = Column(Integer, default=0)
     articles_scanned = Column(Integer, default=0)
     articles_flagged = Column(Integer, default=0)
     status = Column(String, default="running")

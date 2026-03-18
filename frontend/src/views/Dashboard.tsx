@@ -33,7 +33,11 @@ function ScoreBar({ score }: { score: number | null }) {
 
 export default function Dashboard() {
   const qc = useQueryClient()
-  const { data: scans } = useQuery({ queryKey: ['scans'], queryFn: listScans })
+  const { data: scans } = useQuery({
+    queryKey: ['scans'],
+    queryFn: listScans,
+    refetchInterval: (query) => query.state.data?.[0]?.status === 'running' ? 3000 : false,
+  })
   const { data: pending } = useQuery({ queryKey: ['queue', 'pending'], queryFn: () => listQueue('pending') })
   const { data: approved } = useQuery({ queryKey: ['queue', 'approved'], queryFn: () => listQueue('approved') })
   const { data: stats } = useQuery({ queryKey: ['stats'], queryFn: getStats })
@@ -198,6 +202,9 @@ export default function Dashboard() {
                 <dt className="text-slate-500">Started</dt>
                 <dd className="text-slate-700">{lastScan.started_at ? new Date(lastScan.started_at).toLocaleString() : '—'}</dd>
               </dl>
+              {lastScan.status === 'running' && (
+                <ScanProgress scanned={lastScan.articles_scanned} total={lastScan.articles_total} />
+              )}
               {lastScan.status === 'failed' && (
                 <ScanErrorDetail error={lastScan.error} />
               )}
@@ -277,6 +284,25 @@ function classifyError(error: string | null): { label: string; hint: string } | 
     label: 'Unexpected error',
     hint: 'An unexpected error occurred. Check the backend terminal output for a full traceback.',
   }
+}
+
+function ScanProgress({ scanned, total }: { scanned: number; total: number }) {
+  const pct = total > 0 ? Math.round((scanned / total) * 100) : 0
+  const label = total > 0 ? `${scanned} / ${total} articles (${pct}%)` : `${scanned} articles…`
+  return (
+    <div className="mt-4">
+      <div className="flex justify-between text-xs text-slate-500 mb-1">
+        <span>Scanning…</span>
+        <span>{label}</span>
+      </div>
+      <div className="w-full bg-slate-100 rounded-full h-2">
+        <div
+          className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+          style={{ width: total > 0 ? `${pct}%` : '100%', opacity: total > 0 ? 1 : 0.4 }}
+        />
+      </div>
+    </div>
+  )
 }
 
 function ScanErrorDetail({ error }: { error: string | null }) {

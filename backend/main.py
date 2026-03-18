@@ -18,11 +18,15 @@ Base.metadata.create_all(bind=engine)
 # SQLite migrations for columns added after initial schema
 with engine.connect() as _conn:
     from sqlalchemy import text as _text
-    try:
-        _conn.execute(_text("ALTER TABLE articles ADD COLUMN tags TEXT DEFAULT ''"))
-        _conn.commit()
-    except Exception:
-        pass  # column already exists
+    for _stmt in [
+        "ALTER TABLE articles ADD COLUMN tags TEXT DEFAULT ''",
+        "ALTER TABLE scan_jobs ADD COLUMN articles_total INTEGER DEFAULT 0",
+    ]:
+        try:
+            _conn.execute(_text(_stmt))
+            _conn.commit()
+        except Exception:
+            pass  # column already exists
 
 
 @asynccontextmanager

@@ -28,6 +28,7 @@ def list_scans(db: Session = Depends(get_db)):
             "status": j.status,
             "started_at": _fmt(j.started_at),
             "completed_at": _fmt(j.completed_at),
+            "articles_total": j.articles_total,
             "articles_scanned": j.articles_scanned,
             "articles_flagged": j.articles_flagged,
             "error": j.error,
