@@ -185,18 +185,23 @@ export default function Dashboard() {
         <section className="bg-white border border-slate-200 rounded-lg shadow-sm p-5">
           <h2 className="text-sm font-semibold text-slate-700 mb-3">Last Scan</h2>
           {lastScan ? (
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              <dt className="text-slate-500">Mode</dt>
-              <dd className="text-slate-700 font-medium">{lastScan.mode}</dd>
-              <dt className="text-slate-500">Status</dt>
-              <dd className={lastScan.status === 'failed' ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>{lastScan.status}</dd>
-              <dt className="text-slate-500">Scanned</dt>
-              <dd className="text-slate-700">{lastScan.articles_scanned}</dd>
-              <dt className="text-slate-500">Flagged</dt>
-              <dd className="text-slate-700">{lastScan.articles_flagged}</dd>
-              <dt className="text-slate-500">Started</dt>
-              <dd className="text-slate-700">{lastScan.started_at ? new Date(lastScan.started_at).toLocaleString() : '—'}</dd>
-            </dl>
+            <>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                <dt className="text-slate-500">Mode</dt>
+                <dd className="text-slate-700 font-medium">{lastScan.mode}</dd>
+                <dt className="text-slate-500">Status</dt>
+                <dd className={lastScan.status === 'failed' ? 'text-red-600 font-semibold' : lastScan.status === 'running' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>{lastScan.status}</dd>
+                <dt className="text-slate-500">Scanned</dt>
+                <dd className="text-slate-700">{lastScan.articles_scanned}</dd>
+                <dt className="text-slate-500">Flagged</dt>
+                <dd className="text-slate-700">{lastScan.articles_flagged}</dd>
+                <dt className="text-slate-500">Started</dt>
+                <dd className="text-slate-700">{lastScan.started_at ? new Date(lastScan.started_at).toLocaleString() : '—'}</dd>
+              </dl>
+              {lastScan.status === 'failed' && (
+                <ScanErrorDetail error={lastScan.error} />
+              )}
+            </>
           ) : (
             <p className="text-slate-500 text-sm">No scans yet.</p>
           )}
@@ -225,6 +230,66 @@ export default function Dashboard() {
           </div>
         </section>
       </div>
+    </div>
+  )
+}
+
+function classifyError(error: string | null): { label: string; hint: string } | null {
+  if (!error) return null
+  const e = error.toLowerCase()
+  if (e.includes('json') || e.includes("delimiter") || e.includes("parse") || e.includes("expecting")) {
+    return {
+      label: 'Claude returned malformed JSON',
+      hint: 'Claude\'s response contained invalid JSON (often unescaped characters in a proposed HTML rewrite). This is a transient AI output issue. Re-running the scan usually succeeds. If it keeps failing on the same article, check the article body for unusual characters.',
+    }
+  }
+  if (e.includes('401') || e.includes('auth') || e.includes('unauthorized')) {
+    return {
+      label: 'TDX authentication failed',
+      hint: 'The TDX credentials in .env are invalid or expired. Check TDX_USERNAME and TDX_PASSWORD (or BEID/WebServicesKey) and restart the backend.',
+    }
+  }
+  if (e.includes('errno 60') || e.includes('timed out') || e.includes('timeout')) {
+    return {
+      label: 'TDX request timed out',
+      hint: 'TDX is rate-limiting or unreachable. This happens when requests are made faster than the 5-second interval, or when VPN/network access to TDX is unavailable. Ensure you\'re on the Cedarville network or VPN, then retry.',
+    }
+  }
+  if (e.includes('ratelimit') || e.includes('rate limit') || e.includes('429')) {
+    return {
+      label: 'Anthropic API rate limit hit',
+      hint: 'The Anthropic API rate limit was exceeded. Wait a few minutes and retry. Full batch scans call Claude once per article, which can exhaust the token-per-minute limit on lower-tier API plans.',
+    }
+  }
+  if (e.includes('api_key') || e.includes('anthropic') || e.includes('authentication_error')) {
+    return {
+      label: 'Anthropic API key error',
+      hint: 'Check ANTHROPIC_API_KEY in .env — the key may be missing, invalid, or revoked.',
+    }
+  }
+  if (e.includes('connection') || e.includes('network') || e.includes('errno 111') || e.includes('connect')) {
+    return {
+      label: 'Network connection error',
+      hint: 'Could not reach TDX or the Anthropic API. Check your network/VPN connection and verify TDX_BASE_URL in .env.',
+    }
+  }
+  return {
+    label: 'Unexpected error',
+    hint: 'An unexpected error occurred. Check the backend terminal output for a full traceback.',
+  }
+}
+
+function ScanErrorDetail({ error }: { error: string | null }) {
+  const info = classifyError(error)
+  return (
+    <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm">
+      <p className="font-semibold text-red-700 mb-1">{info?.label ?? 'Scan failed'}</p>
+      {error && (
+        <p className="font-mono text-xs text-red-600 bg-red-100 rounded px-2 py-1 mb-2 break-all">{error}</p>
+      )}
+      {info?.hint && (
+        <p className="text-red-700 text-xs leading-relaxed">{info.hint}</p>
+      )}
     </div>
   )
 }

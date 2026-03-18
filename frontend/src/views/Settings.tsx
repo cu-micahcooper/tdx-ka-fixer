@@ -1,6 +1,6 @@
 // frontend/src/views/Settings.tsx
 import { useState, useEffect } from 'react'
-import { getSettings, patchSettings, type AppSettings } from '../api/settings'
+import { getSettings, patchSettings } from '../api/settings'
 
 const ENV_VARS = [
   ['ANTHROPIC_API_KEY', 'Anthropic API key for Claude analysis'],
