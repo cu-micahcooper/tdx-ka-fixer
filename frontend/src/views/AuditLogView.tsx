@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listAudit } from '../api/audit'
 import { listApproved, pushAll, pushOne } from '../api/push'
+import { useSortableTable } from '../hooks/useSortableTable'
 
 const statusColor: Record<string, string> = {
   success: 'text-green-600',
@@ -31,6 +32,20 @@ export default function AuditLogView() {
 
   const unpushed = (approved ?? []).filter(c => c.push_status !== 'success')
 
+  const {
+    sorted: sortedApproved,
+    sortKey: approvedSortKey,
+    sortDir: approvedSortDir,
+    toggleSort: toggleApproved,
+  } = useSortableTable(approved ?? [])
+
+  const {
+    sorted: sortedAudit,
+    sortKey: auditSortKey,
+    sortDir: auditSortDir,
+    toggleSort: toggleAudit,
+  } = useSortableTable(auditEntries ?? [])
+
   return (
     <div>
       {/* Approved Changes */}
@@ -56,16 +71,29 @@ export default function AuditLogView() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-100">
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Article</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">TDX ID</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Approved At</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Status</th>
+                {(
+                  [
+                    ['article_title', 'Article'],
+                    ['tdx_id', 'TDX ID'],
+                    ['approved_at', 'Approved At'],
+                    ['push_status', 'Status'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <th
+                    key={key}
+                    onClick={() => toggleApproved(key)}
+                    className="px-4 py-3 text-left font-semibold text-sm text-gray-700 cursor-pointer select-none hover:bg-slate-200"
+                  >
+                    {label}{' '}
+                    {approvedSortKey === key ? (approvedSortDir === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                ))}
                 <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Error</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
-              {approved?.map(c => (
+              {sortedApproved.map(c => (
                 <tr key={c.id} className="border-t border-slate-200 hover:bg-slate-50">
                   <td className="px-4 py-3 text-sm text-slate-800">{c.article_title ?? '—'}</td>
                   <td className="px-4 py-3 text-sm text-slate-500">{c.tdx_id ?? '—'}</td>
@@ -109,14 +137,27 @@ export default function AuditLogView() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-100">
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">TDX ID</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Action</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Pushed At</th>
+                {(
+                  [
+                    ['tdx_id', 'TDX ID'],
+                    ['action', 'Action'],
+                    ['pushed_at', 'Pushed At'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <th
+                    key={key}
+                    onClick={() => toggleAudit(key)}
+                    className="px-4 py-3 text-left font-semibold text-sm text-gray-700 cursor-pointer select-none hover:bg-slate-200"
+                  >
+                    {label}{' '}
+                    {auditSortKey === key ? (auditSortDir === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                ))}
                 <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Link</th>
               </tr>
             </thead>
             <tbody>
-              {auditEntries?.map(e => (
+              {sortedAudit.map(e => (
                 <tr key={e.id} className="border-t border-slate-200 hover:bg-slate-50">
                   <td className="px-4 py-3 text-sm text-slate-800">{e.tdx_id}</td>
                   <td className="px-4 py-3 text-sm text-slate-600">{e.action}</td>
