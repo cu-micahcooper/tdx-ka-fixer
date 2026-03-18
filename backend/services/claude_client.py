@@ -1,5 +1,4 @@
 # backend/services/claude_client.py
-import json
 import logging
 import re
 import time
@@ -23,19 +22,7 @@ NEVER introduce placeholder or generic text. This means:
 - If a specific detail (e.g. a contact email) is missing from the original AND is not in the scraped source content, omit the reference entirely rather than inventing a placeholder.
 - Preserve all existing cedarville.edu links, TDX ticket links, and internal URLs exactly as they appear in the original.
 
-Analyze the following knowledge base article and return a JSON object with this exact structure:
-{{
-  "score_clarity": <0-10 float>,
-  "score_completeness": <0-10 float>,
-  "score_findability": <0-10 float>,
-  "score_redundancy": <0-10 float>,
-  "score_accuracy": <0-10 float>,
-  "overall_score": <0-10 float, weighted average>,
-  "issue_summary": "<1-2 sentence summary of main issues>",
-  "defects": ["<specific defect 1>", "<specific defect 2>"],
-  "proposed_body": "<full improved HTML body>",
-  "approval_tier": "<one of: auto | confirm | admin>"
-}}
+Analyze the knowledge base article below and call the analyze_article tool with your results.
 
 Scoring dimensions:
 - clarity: readability, structure, plain language
@@ -49,12 +36,35 @@ Approval tier rules:
 - "confirm": grammar, clarity, minor content improvements
 - "admin": major rewrite, structural change, or archival candidate
 
-Return ONLY the JSON object, no other text.
-
 Article Title: {title}
 
 Article Body:
 {body}{sources}"""
+
+_ANALYZE_TOOL = {
+    "name": "analyze_article",
+    "description": "Return KCS analysis scores, defects, a rewritten body, and approval tier.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "score_clarity":      {"type": "number", "description": "0-10"},
+            "score_completeness": {"type": "number", "description": "0-10"},
+            "score_findability":  {"type": "number", "description": "0-10"},
+            "score_redundancy":   {"type": "number", "description": "0-10"},
+            "score_accuracy":     {"type": "number", "description": "0-10"},
+            "overall_score":      {"type": "number", "description": "0-10 weighted average"},
+            "issue_summary":      {"type": "string"},
+            "defects":            {"type": "array", "items": {"type": "string"}},
+            "proposed_body":      {"type": "string", "description": "Full improved HTML body"},
+            "approval_tier":      {"type": "string", "enum": ["auto", "confirm", "admin"]},
+        },
+        "required": [
+            "score_clarity", "score_completeness", "score_findability",
+            "score_redundancy", "score_accuracy", "overall_score",
+            "issue_summary", "defects", "proposed_body", "approval_tier",
+        ],
+    },
+}
 
 
 # ---------------------------------------------------------------------------
@@ -111,20 +121,12 @@ def _scrape_url(url: str) -> str | None:
         return None
 
 
-def _extract_json(text: str) -> dict:
-    """Extract JSON from Claude response, handling markdown fences and common quirks."""
-    text = text.strip()
-    # Strip markdown code fences if present
-    if text.startswith("```"):
-        lines = text.splitlines()
-        text = "\n".join(lines[1:-1]).strip()
-    # Strip trailing commas before } or ] (common LLM output issue, handles nested)
-    text = re.sub(r",(\s*[}\]])", r"\1", text)
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        logger.error("Claude JSON parse failed. Raw response:\n%s", text[:2000])
-        raise
+def _extract_tool_input(response) -> dict:
+    """Extract the tool_use input block from a Claude response."""
+    for block in response.content:
+        if block.type == "tool_use" and block.name == "analyze_article":
+            return block.input
+    raise ValueError(f"Claude did not call analyze_article tool. Content: {response.content!r}")
 
 
 @dataclass
@@ -176,6 +178,8 @@ class ClaudeAnalyzer:
                 response = self.client.messages.create(
                     model=self.model,
                     max_tokens=8096,
+                    tools=[_ANALYZE_TOOL],
+                    tool_choice={"type": "tool", "name": "analyze_article"},
                     messages=[{"role": "user", "content": prompt}],
                 )
                 break
@@ -184,8 +188,7 @@ class ClaudeAnalyzer:
                     raise
                 wait = 60 * (attempt + 1)  # 60s, 120s, 180s
                 time.sleep(wait)
-        raw = response.content[0].text
-        data = _extract_json(raw)
+        data = _extract_tool_input(response)
         return AnalysisResult(
             score_clarity=float(data["score_clarity"]),
             score_completeness=float(data["score_completeness"]),
