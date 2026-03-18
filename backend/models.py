@@ -19,6 +19,7 @@ class Article(Base):
     modified_at = Column(DateTime)
     last_synced_at = Column(DateTime, server_default=func.now())
     view_count = Column(Integer, default=0)
+    tags = Column(Text, default="")        # comma-separated TDX tag names
     heuristic_score = Column(Float, default=10.0)
     status = Column(String, default="active")
     tdx_status = Column(Integer)          # raw TDX Status integer (1=draft,2=submitted,3=published,5=archived)

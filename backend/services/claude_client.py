@@ -37,7 +37,7 @@ Approval tier rules:
 - "admin": major rewrite, structural change, or archival candidate
 
 Article Title: {title}
-
+{tags_line}
 Article Body:
 {body}{sources}"""
 
@@ -151,7 +151,7 @@ class ClaudeAnalyzer:
     # ~25k chars ≈ 6k tokens; keeps total prompt well within 10k token/min limit
     _MAX_BODY_CHARS = 25_000
 
-    def analyze(self, title: str, body: str, directive: str = "") -> AnalysisResult:
+    def analyze(self, title: str, body: str, directive: str = "", tags: str = "") -> AnalysisResult:
         if len(body) > self._MAX_BODY_CHARS:
             body = body[:self._MAX_BODY_CHARS] + "\n\n[TRUNCATED — article exceeds analysis limit]"
 
@@ -171,7 +171,8 @@ class ClaudeAnalyzer:
         else:
             sources_block = ""
 
-        prompt = ANALYSIS_PROMPT.format(title=title, body=body, sources=sources_block, directive=directive)
+        tags_line = f"Article Tags: {tags}\n" if tags else ""
+        prompt = ANALYSIS_PROMPT.format(title=title, body=body, sources=sources_block, directive=directive, tags_line=tags_line)
         # Retry up to 4 times on rate limit errors with increasing back-off
         for attempt in range(4):
             try:

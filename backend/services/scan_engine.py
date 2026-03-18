@@ -28,6 +28,8 @@ class ScanEngine:
     def _sync_article(self, raw: dict) -> Article:
         article = self.db.query(Article).filter_by(tdx_id=raw["ID"]).first()
         tdx_status = raw.get("Status")
+        raw_tags = raw.get("Tags") or []
+        tags_str = ", ".join(str(t) for t in raw_tags) if raw_tags else ""
         data = dict(
             title=raw.get("Subject", ""),
             body=raw.get("Body", ""),
@@ -40,6 +42,7 @@ class ScanEngine:
             tdx_status=tdx_status,
             is_public=bool(raw.get("IsPublic", False)),
             status="archived" if tdx_status == 5 else "active",
+            tags=tags_str,
         )
         if article:
             for k, v in data.items():
@@ -65,7 +68,7 @@ class ScanEngine:
         )
         if existing:
             return False
-        result = self.analyzer.analyze(title=article.title, body=article.body, directive=directive)
+        result = self.analyzer.analyze(title=article.title, body=article.body, directive=directive, tags=article.tags or "")
         analysis = AnalysisResult(
             article_id=article.id,
             model_used=getattr(self.analyzer, "model", "unknown"),

@@ -15,6 +15,15 @@ import routers.push as push_router
 
 Base.metadata.create_all(bind=engine)
 
+# SQLite migrations for columns added after initial schema
+with engine.connect() as _conn:
+    from sqlalchemy import text as _text
+    try:
+        _conn.execute(_text("ALTER TABLE articles ADD COLUMN tags TEXT DEFAULT ''"))
+        _conn.commit()
+    except Exception:
+        pass  # column already exists
+
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
