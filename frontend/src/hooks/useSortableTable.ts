@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 
 type SortDir = 'asc' | 'desc'
 
-export function useSortableTable<T extends Record<string, unknown>>(data: T[]): {
+export function useSortableTable<T extends object>(data: T[]): {
   sorted: T[]
   sortKey: keyof T | null
   sortDir: SortDir

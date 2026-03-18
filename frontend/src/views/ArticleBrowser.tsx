@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listArticles } from '../api/articles'
+import { useSortableTable } from '../hooks/useSortableTable'
 
 const selectCls = 'px-3 py-2 text-sm border border-slate-200 rounded-md bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
 
@@ -53,6 +54,8 @@ export default function ArticleBrowser() {
     return true
   })
 
+  const { sorted, sortKey, sortDir, toggleSort } = useSortableTable(filtered)
+
   return (
     <div>
       <h1 className="mt-0 mb-4 text-2xl font-bold text-slate-800">Article Browser</h1>
@@ -93,16 +96,29 @@ export default function ArticleBrowser() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-100">
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Title</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Category</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Score</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Publish Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Visibility</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm text-gray-700">Modified</th>
+                {(
+                  [
+                    ['title', 'Title'],
+                    ['category_name', 'Category'],
+                    ['heuristic_score', 'Score'],
+                    ['tdx_status', 'Publish Status'],
+                    ['is_public', 'Visibility'],
+                    ['modified_at', 'Modified'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <th
+                    key={key}
+                    onClick={() => toggleSort(key)}
+                    className="px-4 py-3 text-left font-semibold text-sm text-gray-700 cursor-pointer select-none hover:bg-slate-200"
+                  >
+                    {label}{' '}
+                    {sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(a => (
+              {sorted.map(a => (
                 <tr
                   key={a.id}
                   onClick={() => navigate(`/browser/${a.id}`)}
