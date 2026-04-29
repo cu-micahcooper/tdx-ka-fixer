@@ -66,7 +66,6 @@ export default function RichTextEditor({ initialContent, onChange }: Props) {
       const current = editor.getHTML()
       if (initialContent !== current) {
         editor.commands.setContent(initialContent)
-        setRawHtml(initialContent)
       }
     }
   }, [initialContent]) // eslint-disable-line react-hooks/exhaustive-deps
