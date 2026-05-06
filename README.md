@@ -52,7 +52,7 @@ The backend uses FastAPI, SQLAlchemy, SQLite, and APScheduler. The frontend uses
 ### 1. Clone the repository
 
 ```bash
-git clone https://repo.cedarville.edu/micahcooper/tdx-ka-fixer.git
+git clone https://github.com/cu-micahcooper/tdx-ka-fixer
 cd tdx-ka-fixer
 ```
 
